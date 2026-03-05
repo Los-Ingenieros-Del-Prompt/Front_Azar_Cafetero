@@ -1,0 +1,1 @@
+import { useState, useEffect } from 'react'; import { fetchUser } from '../lib/api'; export function useUser() { const [user, setUser] = useState(null); useEffect(() => { fetchUser().then(setUser); }, []); return user; }
