@@ -1,6 +1,6 @@
 "use client";
 
-import Background from "../components/login/Background";
+import Background from "../components/common/Background";
 import LoginCard from "../components/login/LoginCard";
 import LoginHero from "../components/login/LoginHero";
 
