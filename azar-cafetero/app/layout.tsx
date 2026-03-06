@@ -8,7 +8,7 @@ const josefin = Josefin_Sans({ subsets: ["latin"], weight: ["400", "500", "700"]
 
 export const metadata: Metadata = {
   title: "AzarCafetero",
-  description: "Proyecto Casino - Login",
+  description: "-Azar - Login",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
