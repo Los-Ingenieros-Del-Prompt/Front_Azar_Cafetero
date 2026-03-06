@@ -19,12 +19,35 @@ interface BuildingLayout {
   floors: Floor[];
 }
 
+/** Shape returned by the Spring Boot FloorDTO */
+interface FloorDTO {
+  name: string;
+  icon: string;
+  route: string;
+}
+
+const FLOOR_COLORS = ["#f472b6", "#facc15", "#34d399", "#60a5fa", "#a78bfa"];
+
+function mapDTOtoFloors(dtos: FloorDTO[]): Floor[] {
+  return dtos.map((dto, index) => ({
+    id: `floor-${index + 1}`,
+    number: index + 1,
+    name: dto.name,
+    icon: dto.icon,
+    route: dto.route,
+    description: "",
+    available: true,
+    color: FLOOR_COLORS[index % FLOOR_COLORS.length],
+  }));
+}
+
 async function fetchBuildingLayout(): Promise<BuildingLayout> {
   if (!process.env.NEXT_PUBLIC_API_URL) return mockBuildingLayout;
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/building/layout`);
     if (!res.ok) throw new Error(`Error al cargar el edificio: ${res.status}`);
-    return res.json();
+    const data: FloorDTO[] = await res.json();
+    return { floors: mapDTOtoFloors(data) };
   } catch {
     return mockBuildingLayout;
   }
