@@ -1,1 +1,9 @@
-import { useState, useEffect } from 'react'; import { fetchUser } from '../lib/api'; export function useUser() { const [user, setUser] = useState(null); useEffect(() => { fetchUser().then(setUser); }, []); return user; }
+import { useUserContext } from "../context/UserContext";
+
+/**
+ * Hook conveniente que re-exporta el contexto de usuario.
+ * Equivale a useUserContext() pero con nombre más corto.
+ */
+export function useUser() {
+  return useUserContext();
+}
