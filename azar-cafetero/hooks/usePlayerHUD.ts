@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { getToken } from "@/lib/auth";
 
 export interface PlayerIdentity {
   name: string;
@@ -10,17 +11,22 @@ export interface PlayerIdentity {
 
 const API = process.env.NEXT_PUBLIC_LOBBY_URL ?? "http://localhost:8081";
 
+function authHeaders(): HeadersInit {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function fetchIdentity(): Promise<PlayerIdentity> {
-  const res = await fetch(`${API}/api/player/identity`, {
-    credentials: "include", // envía la cookie de sesión / JWT
+  const res = await fetch(`${API}player/identity`, {
+    headers: authHeaders(),
   });
   if (!res.ok) throw new Error(`identity: ${res.status}`);
   return res.json();
 }
 
 async function fetchBalance(): Promise<number> {
-  const res = await fetch(`${API}/api/player/identity`, {
-    credentials: "include",
+  const res = await fetch(`${API}player/identity`, {
+    headers: { ...authHeaders() },
     cache: "no-store",     // siempre fresco al volver de una partida
   });
   if (!res.ok) throw new Error(`balance: ${res.status}`);

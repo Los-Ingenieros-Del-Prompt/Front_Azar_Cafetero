@@ -47,7 +47,7 @@ const LOBBY_API = process.env.NEXT_PUBLIC_LOBBY_URL ?? "http://localhost:8081";
 async function fetchBuildingLayout(): Promise<BuildingLayout> {
   if (!process.env.NEXT_PUBLIC_LOBBY_URL) return mockBuildingLayout;
   try {
-    const res = await fetch(`${LOBBY_API}/building/layout`);
+    const res = await fetch(`${LOBBY_API}building/layout`);
     if (!res.ok) throw new Error(`Error al cargar el edificio: ${res.status}`);
     const data: FloorDTO[] = await res.json();
     return { floors: mapDTOtoFloors(data) };
