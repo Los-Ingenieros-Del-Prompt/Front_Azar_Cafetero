@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { mockBuildingLayout } from "./mockBuildingLayout";
+import { mockBuildingLayout } from "@/app/lobby/mockBuildingLayout";
+import PlayerHUD from "@/components/lobby/PlayerHUD";
+import { useUserContext } from "@/context/UserContext";
 
 interface Floor {
   id: string;
@@ -19,7 +21,6 @@ interface BuildingLayout {
   floors: Floor[];
 }
 
-/** Shape returned by the Spring Boot FloorDTO */
 interface FloorDTO {
   name: string;
   icon: string;
@@ -41,10 +42,12 @@ function mapDTOtoFloors(dtos: FloorDTO[]): Floor[] {
   }));
 }
 
+const LOBBY_API = process.env.NEXT_PUBLIC_LOBBY_URL ?? "http://localhost:8081";
+
 async function fetchBuildingLayout(): Promise<BuildingLayout> {
-  if (!process.env.NEXT_PUBLIC_API_URL) return mockBuildingLayout;
+  if (!process.env.NEXT_PUBLIC_LOBBY_URL) return mockBuildingLayout;
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/building/layout`);
+    const res = await fetch(`${LOBBY_API}building/layout`);
     if (!res.ok) throw new Error(`Error al cargar el edificio: ${res.status}`);
     const data: FloorDTO[] = await res.json();
     return { floors: mapDTOtoFloors(data) };
@@ -55,6 +58,7 @@ async function fetchBuildingLayout(): Promise<BuildingLayout> {
 
 export default function LobbyView() {
   const router = useRouter();
+  const { logout } = useUserContext();
   const [floors, setFloors] = useState<Floor[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [navigating, setNavigating] = useState<string | null>(null);
@@ -88,6 +92,9 @@ export default function LobbyView() {
     touchStartX.current = null;
   };
 
+  const handleClaimDaily = () => router.push("/daily-reward");
+  const handleLogout = () => { logout(); router.replace("/"); };
+
   return (
     <>
       <style>{`
@@ -110,7 +117,6 @@ export default function LobbyView() {
           overflow: hidden;
         }
 
-        /* ── Header ── */
         .lobby-header {
           text-align: center;
           margin-bottom: 3rem;
@@ -142,7 +148,6 @@ export default function LobbyView() {
           font-weight: 300;
         }
 
-        /* ── Slider track ── */
         .slider-viewport {
           width: 100%;
           max-width: 900px;
@@ -153,12 +158,11 @@ export default function LobbyView() {
         .slider-track {
           display: flex;
           gap: 1.25rem;
-          padding: 0 calc(50% - 200px);   /* centers active card */
+          padding: 0 calc(50% - 200px);
           transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
           will-change: transform;
         }
 
-        /* ── Card ── */
         .game-card {
           flex-shrink: 0;
           width: 400px;
@@ -193,16 +197,13 @@ export default function LobbyView() {
           box-shadow: 0 32px 80px rgba(0,0,0,0.5);
         }
 
-        .game-card.is-active:hover {
-          transform: scale(1.02);
-        }
+        .game-card.is-active:hover { transform: scale(1.02); }
 
         .game-card.navigating {
           opacity: 0.5;
           pointer-events: none;
         }
 
-        /* Card background fill */
         .card-bg {
           position: absolute;
           inset: 0;
@@ -213,7 +214,6 @@ export default function LobbyView() {
 
         .game-card.is-active:hover .card-bg { opacity: 0.12; }
 
-        /* Top accent bar */
         .card-accent {
           position: absolute;
           top: 0; left: 0; right: 0;
@@ -222,7 +222,6 @@ export default function LobbyView() {
           border-radius: 24px 24px 0 0;
         }
 
-        /* Big icon area */
         .card-icon-wrap {
           position: absolute;
           top: 2.5rem;
@@ -239,11 +238,7 @@ export default function LobbyView() {
           transform: scale(1.06) rotate(-4deg);
         }
 
-        /* Content */
-        .card-content {
-          position: relative;
-          z-index: 1;
-        }
+        .card-content { position: relative; z-index: 1; }
 
         .card-floor-label {
           font-size: 0.68rem;
@@ -272,7 +267,6 @@ export default function LobbyView() {
           margin-bottom: 2rem;
         }
 
-        /* CTA button */
         .card-cta {
           display: inline-flex;
           align-items: center;
@@ -305,7 +299,6 @@ export default function LobbyView() {
           animation: spin 0.6s linear infinite;
         }
 
-        /* ── Dots ── */
         .slider-dots {
           display: flex;
           justify-content: center;
@@ -322,7 +315,7 @@ export default function LobbyView() {
           border: none;
           cursor: pointer;
           padding: 0;
-          transition: background 0.2s, transform 0.2s, width 0.25s;
+          transition: background 0.2s, width 0.25s;
         }
 
         .dot.active {
@@ -331,7 +324,6 @@ export default function LobbyView() {
           border-radius: 3px;
         }
 
-        /* ── Nav arrows ── */
         .slider-arrow {
           position: absolute;
           top: 50%;
@@ -351,12 +343,11 @@ export default function LobbyView() {
           z-index: 10;
         }
 
-        .slider-arrow:hover { background: rgba(255,255,255,0.22); }
+        .slider-arrow:hover  { background: rgba(255,255,255,0.22); }
         .slider-arrow:disabled { opacity: 0.2; cursor: default; }
         .slider-arrow.prev { left: 1rem; }
         .slider-arrow.next { right: 1rem; }
 
-        /* ── Skeleton ── */
         .skeleton-card {
           flex-shrink: 0;
           width: 400px;
@@ -385,7 +376,6 @@ export default function LobbyView() {
           right: 2.5rem;
         }
 
-        /* ── Animations ── */
         @keyframes fadeDown {
           from { opacity: 0; transform: translateY(-16px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -403,7 +393,6 @@ export default function LobbyView() {
 
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ── Responsive ── */
         @media (max-width: 480px) {
           .game-card, .skeleton-card { width: 300px; min-height: 400px; }
           .card-name { font-size: 1.9rem; }
@@ -412,21 +401,21 @@ export default function LobbyView() {
         }
       `}</style>
 
+      {/* HUD fijo — se monta inmediatamente, independiente del slider */}
+      <PlayerHUD onClaimDaily={handleClaimDaily} onLogout={handleLogout} />
+
       <div className="lobby-root">
-        {/* Header */}
         <header className="lobby-header">
           <p className="lobby-eyebrow">Casino Nacional</p>
           <h1 className="lobby-title">¿A qué jugamos hoy?</h1>
           <p className="lobby-sub">Desliza y elige tu juego</p>
         </header>
 
-        {/* Slider */}
         <div
           className="slider-viewport"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Arrows */}
           {!loading && (
             <>
               <button
@@ -452,12 +441,9 @@ export default function LobbyView() {
             </>
           )}
 
-          {/* Track */}
           <div
             className="slider-track"
-            style={{
-              transform: `translateX(calc(-${active} * (400px + 1.25rem)))`,
-            }}
+            style={{ transform: `translateX(calc(-${active} * (400px + 1.25rem)))` }}
             role="region"
             aria-label="Juegos disponibles"
           >
@@ -492,13 +478,8 @@ export default function LobbyView() {
                 >
                   <div className="card-bg" />
                   <div className="card-accent" />
+                  <div className="card-icon-wrap" aria-hidden="true">{floor.icon}</div>
 
-                  {/* Big decorative icon */}
-                  <div className="card-icon-wrap" aria-hidden="true">
-                    {floor.icon}
-                  </div>
-
-                  {/* Content */}
                   <div className="card-content">
                     <p className="card-floor-label">Piso {floor.number}</p>
                     <h2 className="card-name">{floor.name}</h2>
@@ -530,7 +511,6 @@ export default function LobbyView() {
           </div>
         </div>
 
-        {/* Dots */}
         {!loading && (
           <div className="slider-dots" role="tablist" aria-label="Navegación del slider">
             {floors.map((floor, i) => (
