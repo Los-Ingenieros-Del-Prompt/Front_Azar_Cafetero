@@ -1,124 +1,117 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import AvatarSelector from "@/components/profile/AvatarSelector";
-import UsernameEditor from "@/components/profile/UsernameEditor";
-import { getProfileStatus, updateAvatar } from "@/lib/profileApi";
-
-interface ProfileStatus {
-    username: string;
-    avatarUrl: string;
-    canChangeName: boolean;
-    daysUntilNextChange: number;
-}
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import AvatarGrid from '@/components/profile/AvatarGrid';
+import ProfileForm from '@/components/profile/ProfileForm';
+import { getProfileStatus, updateAvatar, updateName, updateUsername } from '@/lib/profileApi';
 
 export default function ProfilePage() {
     const router = useRouter();
-    const [profile, setProfile] = useState<ProfileStatus | null>(null);
-    const [selectedAvatar, setSelectedAvatar] = useState("");
-    const [avatarMessage, setAvatarMessage] = useState("");
+
+    const [selectedAvatarUrl, setSelectedAvatarUrl] = useState('');
+    const [name, setName] = useState('');
+    const [username, setUsername] = useState('');
+    const [canChangeName, setCanChangeName] = useState(true);
+    const [daysUntilNextChange, setDaysUntilNextChange] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [message, setMessage] = useState('');
+    const [messageType, setMessageType] = useState<'success' | 'error'>('success');
+    const [suggestions, setSuggestions] = useState<string[]>([]);
 
     useEffect(() => {
         getProfileStatus()
             .then((data) => {
-                setProfile(data);
-                setSelectedAvatar(data.avatarUrl);
+                setSelectedAvatarUrl(data.avatarUrl);
+                setName(data.name);
+                setUsername(data.username);
+                setCanChangeName(data.canChangeName);
+                setDaysUntilNextChange(data.daysUntilNextChange);
             })
-            .catch(() => router.push("/login"))
+            .catch(() => router.push('/login'))
             .finally(() => setLoading(false));
     }, []);
 
-    async function handleSaveAvatar() {
-        if (!selectedAvatar || selectedAvatar === profile?.avatarUrl) return;
-        await updateAvatar(selectedAvatar);
-        setProfile((prev) =>
-            prev ? { ...prev, avatarUrl: selectedAvatar } : prev
-        );
-        setAvatarMessage("✅ Avatar actualizado");
-        setTimeout(() => setAvatarMessage(""), 3000);
-    }
+    async function handleGuardar() {
+        setSaving(true);
+        setMessage('');
+        setSuggestions([]);
 
-    function handleUsernameSuccess(newUsername: string) {
-        setProfile((prev) =>
-            prev ? { ...prev, username: newUsername } : prev
-        );
+        try {
+            await updateAvatar(selectedAvatarUrl);
+            await updateName(name);
+
+            const { status, data } = await updateUsername(username);
+
+            if (status === 409) {
+                setMessage('⚠️ ' + data.message);
+                setMessageType('error');
+                setSuggestions(data.suggestions || []);
+                setSaving(false);
+                return;
+            }
+
+            if (status === 403) {
+                setMessage(`⛔ Debes esperar ${data.daysUntilNextChange} días`);
+                setMessageType('error');
+                setSaving(false);
+                return;
+            }
+
+            setMessage('✅ Perfil actualizado correctamente');
+            setMessageType('success');
+
+        } catch {
+            setMessage('❌ Error al guardar, intenta de nuevo');
+            setMessageType('error');
+        }
+
+        setSaving(false);
     }
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-900 flex items-center
-                justify-center">
+            <div className="min-h-screen flex items-center justify-center 
+                bg-slate-900">
                 <p className="text-white text-lg">Cargando perfil...</p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white">
-            {/* Header */}
-            <div className="bg-gray-800 border-b border-gray-700 px-6 py-4
-                flex items-center gap-4">
-                <button
-                    onClick={() => router.back()}
-                    className="text-gray-400 hover:text-white transition-colors"
-                >
-                    ← Volver
-                </button>
-                <h1 className="text-xl font-bold text-green-400">
-                    Editar Perfil
-                </h1>
-            </div>
+        <div className="min-h-screen w-full flex items-center justify-center 
+            p-4 bg-slate-900 relative overflow-hidden">
 
-            <div className="max-w-md mx-auto px-6 py-8 flex flex-col gap-8">
+            {/* Fondo */}
+            <div
+                className="absolute inset-0 z-0 bg-cover bg-center"
+                style={{ backgroundImage: "url('/images/backgroundLogin.jpg')" }}
+            />
 
-                {/* Sección Avatar */}
-                <div className="bg-gray-800 rounded-xl p-6 flex flex-col gap-4">
-                    <h2 className="text-lg font-semibold text-green-400">
-                        🖼️ Avatar
-                    </h2>
-                    <AvatarSelector
-                        selected={selectedAvatar}
-                        onSelect={setSelectedAvatar}
-                    />
-                    {avatarMessage && (
-                        <p className="text-green-400 text-sm text-center">
-                            {avatarMessage}
-                        </p>
-                    )}
-                    <button
-                        onClick={handleSaveAvatar}
-                        disabled={selectedAvatar === profile?.avatarUrl}
-                        className="w-full bg-green-600 hover:bg-green-700
-                            disabled:opacity-40 disabled:cursor-not-allowed
-                            text-white py-2 rounded-lg font-semibold
-                            transition-colors"
-                    >
-                        Guardar Avatar
-                    </button>
-                </div>
+            {/* Contenedor principal */}
+            <div className="relative z-10 w-full max-w-6xl bg-white/20 
+                backdrop-blur-xl border border-white/30 rounded-[3rem] p-8 
+                md:p-12 shadow-2xl flex flex-col lg:flex-row gap-8">
 
-                {/* Sección Username */}
-                <div className="bg-gray-800 rounded-xl p-6 flex flex-col gap-4">
-                    <h2 className="text-lg font-semibold text-green-400">
-                        ✏️ Nombre de usuario
-                    </h2>
-                    <p className="text-gray-400 text-sm">
-                        Actual:{" "}
-                        <span className="text-white font-bold">
-                            {profile?.username}
-                        </span>
-                    </p>
-                    {profile && (
-                        <UsernameEditor
-                            currentUsername={profile.username}
-                            canChangeName={profile.canChangeName}
-                            daysUntilNextChange={profile.daysUntilNextChange}
-                            onSuccess={handleUsernameSuccess}
-                        />
-                    )}
-                </div>
+                <AvatarGrid
+                    selectedUrl={selectedAvatarUrl}
+                    onSelect={setSelectedAvatarUrl}
+                />
+
+                <ProfileForm
+                    name={name}
+                    username={username}
+                    canChangeName={canChangeName}
+                    daysUntilNextChange={daysUntilNextChange}
+                    saving={saving}
+                    message={message}
+                    messageType={messageType}
+                    suggestions={suggestions}
+                    onNameChange={setName}
+                    onUsernameChange={setUsername}
+                    onGuardar={handleGuardar}
+                />
             </div>
         </div>
     );
