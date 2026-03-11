@@ -12,7 +12,21 @@ export function saveToken(token: string): void {
 }
 
 export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return null;
+
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    if (payload.exp && Date.now() >= payload.exp * 1000) {
+      removeToken();
+      return null;
+    }
+  } catch {
+    removeToken();
+    return null;
+  }
+
+  return token;
 }
 
 export function removeToken(): void {
