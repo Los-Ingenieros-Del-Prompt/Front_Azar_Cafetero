@@ -1,52 +1,57 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import AvatarGrid from '@/components/profile/AvatarGrid';
-import ProfileForm from '@/components/profile/ProfileForm';
-import { getProfileStatus, updateAvatar, updateName, updateUsername } from '@/lib/profileApi';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import AvatarGrid from "@/components/profile/AvatarGrid";
+import ProfileForm from "@/components/profile/ProfileForm";
+import { useUserContext } from "@/context/UserContext";
+import { getProfileStatus, updateAvatar, updateUsername } from "@/lib/profileApi";
 
 export default function ProfilePage() {
     const router = useRouter();
+    const { token, isLoading: authLoading } = useUserContext();
 
-    const [selectedAvatarUrl, setSelectedAvatarUrl] = useState('');
-    const [name, setName] = useState('');
-    const [username, setUsername] = useState('');
-    const [canChangeName, setCanChangeName] = useState(true);
-    const [daysUntilNextChange, setDaysUntilNextChange] = useState(0);
+    const [selectedAvatarUrl, setSelectedAvatarUrl] = useState("");
+    const [username, setUsername] = useState("");
+
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [message, setMessage] = useState('');
-    const [messageType, setMessageType] = useState<'success' | 'error'>('success');
+
+    const [message, setMessage] = useState("");
+    const [messageType, setMessageType] = useState<"success" | "error">("success");
     const [suggestions, setSuggestions] = useState<string[]>([]);
 
     useEffect(() => {
+        if (authLoading) return;
+
+        if (!token) {
+            router.push("/login");
+            return;
+        }
+
         getProfileStatus()
             .then((data) => {
                 setSelectedAvatarUrl(data.avatarUrl);
-                setName(data.name);
                 setUsername(data.username);
-                setCanChangeName(data.canChangeName);
-                setDaysUntilNextChange(data.daysUntilNextChange);
             })
-            .catch(() => router.push('/login'))
+            .catch(() => router.push("/login"))
             .finally(() => setLoading(false));
-    }, []);
+
+    }, [authLoading, token]);
 
     async function handleGuardar() {
         setSaving(true);
-        setMessage('');
+        setMessage("");
         setSuggestions([]);
 
         try {
             await updateAvatar(selectedAvatarUrl);
-            await updateName(name);
 
             const { status, data } = await updateUsername(username);
 
             if (status === 409) {
-                setMessage('⚠️ ' + data.message);
-                setMessageType('error');
+                setMessage("⚠️ " + data.message);
+                setMessageType("error");
                 setSuggestions(data.suggestions || []);
                 setSaving(false);
                 return;
@@ -54,17 +59,17 @@ export default function ProfilePage() {
 
             if (status === 403) {
                 setMessage(`⛔ Debes esperar ${data.daysUntilNextChange} días`);
-                setMessageType('error');
+                setMessageType("error");
                 setSaving(false);
                 return;
             }
 
-            setMessage('✅ Perfil actualizado correctamente');
-            setMessageType('success');
+            setMessage("✅ Perfil actualizado correctamente");
+            setMessageType("success");
 
         } catch {
-            setMessage('❌ Error al guardar, intenta de nuevo');
-            setMessageType('error');
+            setMessage("❌ Error al guardar, intenta de nuevo");
+            setMessageType("error");
         }
 
         setSaving(false);
@@ -72,8 +77,7 @@ export default function ProfilePage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center 
-                bg-slate-900">
+            <div className="min-h-screen flex items-center justify-center bg-slate-900">
                 <p className="text-white text-lg">Cargando perfil...</p>
             </div>
         );
@@ -89,7 +93,7 @@ export default function ProfilePage() {
                 style={{ backgroundImage: "url('/images/backgroundLogin.jpg')" }}
             />
 
-            {/* Contenedor principal */}
+            {/* Contenedor */}
             <div className="relative z-10 w-full max-w-6xl bg-white/20 
                 backdrop-blur-xl border border-white/30 rounded-[3rem] p-8 
                 md:p-12 shadow-2xl flex flex-col lg:flex-row gap-8">
@@ -100,18 +104,15 @@ export default function ProfilePage() {
                 />
 
                 <ProfileForm
-                    name={name}
                     username={username}
-                    canChangeName={canChangeName}
-                    daysUntilNextChange={daysUntilNextChange}
                     saving={saving}
                     message={message}
                     messageType={messageType}
                     suggestions={suggestions}
-                    onNameChange={setName}
                     onUsernameChange={setUsername}
                     onGuardar={handleGuardar}
                 />
+
             </div>
         </div>
     );

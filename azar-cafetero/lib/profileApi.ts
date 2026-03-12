@@ -1,7 +1,9 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+import { getUserId } from "./auth";
+
+const BASE_URL = process.env.NEXT_PUBLIC_USER_URL || "http://localhost:8082";
 
 function getHeaders() {
-    const userId = localStorage.getItem("userId");
+    const userId = getUserId();
     return {
         "Content-Type": "application/json",
         "X-User-Id": userId || "",
@@ -26,21 +28,12 @@ export async function updateAvatar(avatarUrl: string) {
     return res.json();
 }
 
-export async function updateName(name: string) {
-    const res = await fetch(`${BASE_URL}/profile/name`, {
-        method: "PUT",
-        headers: getHeaders(),
-        body: JSON.stringify({ name }),
-    });
-    if (!res.ok) throw new Error("Error al actualizar nombre");
-    return res.json();
-}
-
 export async function updateUsername(username: string) {
     const res = await fetch(`${BASE_URL}/profile/username`, {
         method: "PUT",
         headers: getHeaders(),
         body: JSON.stringify({ username }),
     });
+
     return { status: res.status, data: await res.json() };
 }
