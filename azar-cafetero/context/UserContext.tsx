@@ -1,5 +1,4 @@
 "use client";
-
 import {
   createContext,
   useContext,
@@ -8,14 +7,18 @@ import {
   useCallback,
   ReactNode,
 } from "react";
-import { getToken, getSavedUser, saveToken, saveUser, removeToken, StoredUser } from "../lib/auth";
-import { AuthResponse } from "../lib/api";
+
+const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+
+export interface StoredUser {
+  name: string;
+  avatarUrl: string;
+}
 
 interface UserContextValue {
   user: StoredUser | null;
-  token: string | null;
   isLoading: boolean;
-  login: (authResponse: AuthResponse) => void;
+  login: (userData: StoredUser) => void;
   logout: () => void;
 }
 
@@ -23,39 +26,42 @@ const UserContext = createContext<UserContextValue | null>(null);
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<StoredUser | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Rehydrate session al montar
+  // Al montar, intenta recuperar los datos del usuario desde sessionStorage
+  // (solo nombre y avatar — el JWT vive en la cookie HttpOnly)
   useEffect(() => {
-    const savedToken = getToken();
-    const savedUser = getSavedUser();
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(savedUser);
+    try {
+      const saved = sessionStorage.getItem("user");
+      if (saved) setUser(JSON.parse(saved));
+    } catch {
+      // sessionStorage no disponible (SSR)
     }
     setIsLoading(false);
   }, []);
 
-  const login = useCallback((authResponse: AuthResponse) => {
-    const userData: StoredUser = {
-      name: authResponse.name,
-      avatarUrl: authResponse.avatarUrl,
-    };
-    saveToken(authResponse.token);
-    saveUser(userData);
-    setToken(authResponse.token);
+  const login = useCallback((userData: StoredUser) => {
+    sessionStorage.setItem("user", JSON.stringify(userData));
     setUser(userData);
   }, []);
 
-  const logout = useCallback(() => {
-    removeToken();
-    setToken(null);
+  const logout = useCallback(async () => {
+    // Borra la cookie HttpOnly en el gateway
+    try {
+      await fetch(`${GATEWAY}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // continuar aunque falle
+    }
+    sessionStorage.removeItem("user");
     setUser(null);
+    window.location.replace("/");
   }, []);
 
   return (
-    <UserContext.Provider value={{ user, token, isLoading, login, logout }}>
+    <UserContext.Provider value={{ user, isLoading, login, logout }}>
       {children}
     </UserContext.Provider>
   );

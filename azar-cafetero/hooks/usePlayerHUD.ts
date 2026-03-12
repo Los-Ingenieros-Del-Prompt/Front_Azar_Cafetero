@@ -1,36 +1,30 @@
 "use client";
-
 import { useEffect, useState, useCallback } from "react";
-import { getToken } from "@/lib/auth";
 
 export interface PlayerIdentity {
   name: string;
-  avatar: string;        // URL or emoji string
-  balance: number;       // BigDecimal comes as number in JSON
+  avatar: string;
+  balance: number;
 }
 
-const API = process.env.NEXT_PUBLIC_LOBBY_URL ?? "http://localhost:8081";
-
-function authHeaders(): HeadersInit {
-  const token = getToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
+// Apunta al gateway, no al lobby directamente
+const API = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
 
 async function fetchIdentity(): Promise<PlayerIdentity> {
-  const res = await fetch(`${API}player/identity`, {
-    headers: authHeaders(),
+  const res = await fetch(`${API}/api/player/identity`, {
+    credentials: "include", // ← envía la cookie HttpOnly automáticamente
   });
   if (!res.ok) throw new Error(`identity: ${res.status}`);
   return res.json();
 }
 
 async function fetchBalance(): Promise<number> {
-  const res = await fetch(`${API}player/identity`, {
-    headers: { ...authHeaders() },
-    cache: "no-store",     // siempre fresco al volver de una partida
+  const res = await fetch(`${API}/api/player/balance`, {
+    credentials: "include",
+    cache: "no-store",
   });
   if (!res.ok) throw new Error(`balance: ${res.status}`);
-  const data: PlayerIdentity = await res.json();
+  const data: { balance: number } = await res.json();
   return data.balance;
 }
 
@@ -47,7 +41,6 @@ export function usePlayerHUD(): UsePlayerHUDReturn {
   const [loading, setLoading]   = useState<boolean>(true);
   const [error, setError]       = useState<string | null>(null);
 
-  // Carga inicial de identidad completa (nombre + avatar + saldo)
   useEffect(() => {
     fetchIdentity()
       .then(setIdentity)
@@ -55,14 +48,11 @@ export function usePlayerHUD(): UsePlayerHUDReturn {
       .finally(() => setLoading(false));
   }, []);
 
-  // Actualiza solo el saldo cuando la pestaña vuelve a ser visible
-  // (cubre el caso: jugador regresa de una partida sin recargar)
   const refreshBalance = useCallback(async () => {
     try {
       const balance = await fetchBalance();
       setIdentity((prev) => (prev ? { ...prev, balance } : prev));
     } catch (e) {
-      // silent — el saldo anterior sigue visible
       console.warn("No se pudo actualizar el saldo:", e);
     }
   }, []);

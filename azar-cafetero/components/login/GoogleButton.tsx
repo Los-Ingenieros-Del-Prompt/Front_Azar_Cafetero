@@ -1,9 +1,9 @@
 "use client";
-
 import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
-import { authenticateWithGoogle } from "../../lib/api";
-import { useUserContext } from "../../context/UserContext";
 import { useRouter } from "next/navigation";
+import { useUserContext } from "@/context/UserContext";
+
+const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
 
 interface GoogleButtonProps {
   onError: (message: string) => void;
@@ -11,8 +11,8 @@ interface GoogleButtonProps {
 }
 
 export default function GoogleButton({ onError, onLoadingChange }: GoogleButtonProps) {
-  const { login } = useUserContext();
   const router = useRouter();
+  const { login } = useUserContext();
 
   const handleSuccess = async (credentialResponse: CredentialResponse) => {
     const idToken = credentialResponse.credential;
@@ -25,9 +25,20 @@ export default function GoogleButton({ onError, onLoadingChange }: GoogleButtonP
     onError("");
 
     try {
-      const authResponse = await authenticateWithGoogle(idToken);
-      login(authResponse);
-      // Redirige al lobby — cumple criterio <5s nuevo, <3s existente
+      const res = await fetch(`${GATEWAY}/auth/google`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!res.ok) throw new Error(`Error de autenticación: ${res.status}`);
+
+      const data = await res.json();
+
+      // Guarda nombre y avatar en contexto (el JWT vive en cookie HttpOnly)
+      login({ name: data.name, avatarUrl: data.avatarUrl });
+
       router.replace("/lobby");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Error al autenticar";
@@ -51,7 +62,6 @@ export default function GoogleButton({ onError, onLoadingChange }: GoogleButtonP
         theme="outline"
         size="large"
         width="320"
-        locale="es"
       />
     </div>
   );
