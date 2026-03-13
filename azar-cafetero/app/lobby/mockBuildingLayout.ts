@@ -8,7 +8,7 @@ export const mockBuildingLayout: BuildingLayout = {
     {
       id: "floor-1",
       number: 1,
-      name: "Parqués ",
+      name: "Parqués",
       route: "/games/parques",
       icon: "🎰",
       description: "Mesas de juego clásico colombiano Parqués",
