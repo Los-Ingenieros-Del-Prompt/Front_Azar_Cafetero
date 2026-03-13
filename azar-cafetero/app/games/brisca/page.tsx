@@ -35,17 +35,16 @@ export default function BriscaFloor() {
     <div className="relative min-h-screen w-full font-sans text-white overflow-hidden bg-slate-900">
       
       {/* background */}
-      <div className="absolute inset-0">
-        <div
-          className="absolute inset-0 bg-no-repeat bg-cover"
-          style={{
-            backgroundImage: "url('/images/backgroundbrisca.jpeg')",
-            backgroundPosition: "center 30%",
-          }}
-        />
-        <div className="absolute inset-0 bg-black/60" />
-        <div className="absolute inset-0 backdrop-blur-[2px]" />
-      </div>
+      <div
+  className="absolute inset-0 z-0 bg-cover bg-no-repeat"
+  style={{
+    backgroundImage: `
+      linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.5)),
+      url('/images/backgroundbrisca.jpg')
+    `,
+    backgroundPosition: "center 30%",
+  }}
+/>
 
       {/* sidebar */}
       <nav className="absolute left-6 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-8 p-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full shadow-2xl">
