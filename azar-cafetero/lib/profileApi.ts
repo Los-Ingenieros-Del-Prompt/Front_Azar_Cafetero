@@ -1,12 +1,11 @@
-import { getUserId } from "./auth";
-
 const BASE_URL = process.env.NEXT_PUBLIC_USER_URL || "http://localhost:8082";
 
 function getHeaders() {
-    const userId = getUserId();
+    const token = localStorage.getItem("azar_jwt");
+
     return {
         "Content-Type": "application/json",
-        "X-User-Id": userId || "",
+        Authorization: `Bearer ${token}`,
     };
 }
 
@@ -14,7 +13,10 @@ export async function getProfileStatus() {
     const res = await fetch(`${BASE_URL}/profile/status`, {
         headers: getHeaders(),
     });
-    if (!res.ok) throw new Error("Error al obtener perfil");
+    if (!res.ok) {
+    const error = await res.text();
+    throw new Error(error);
+    }
     return res.json();
 }
 
