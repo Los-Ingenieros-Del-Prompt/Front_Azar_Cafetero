@@ -42,7 +42,7 @@ function mapDTOtoFloors(dtos: FloorDTO[]): Floor[] {
   }));
 }
 
-const LOBBY_API = process.env.NEXT_PUBLIC_LOBBY_URL ?? "http://localhost:8081";
+const LOBBY_API = process.env.NEXT_PUBLIC_LOBBY_URL ?? "http://localhost:8080";
 
 async function fetchBuildingLayout(): Promise<BuildingLayout> {
   if (!process.env.NEXT_PUBLIC_LOBBY_URL) return mockBuildingLayout;
