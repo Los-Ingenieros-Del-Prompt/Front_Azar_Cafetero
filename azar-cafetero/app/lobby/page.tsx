@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useUserContext } from "../../context/UserContext";
 import LobbyView from "@/components/lobby/LobbyView";
 import LobbyAmbientAudio from "@/components/common/LobbyAmbientAudio";
+import MuteButton from "@/components/common/MuteButton";
 
 export default function LobbyPage() {
   const { user, isLoading } = useUserContext();
@@ -21,7 +22,7 @@ export default function LobbyPage() {
     <>
       <LobbyAmbientAudio />
       <LobbyView />
+      <MuteButton />
     </>
   );
 }
-

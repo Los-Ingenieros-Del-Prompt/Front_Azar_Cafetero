@@ -1,37 +1,18 @@
 "use client";
-
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
+import { useAudio } from "@/context/AudioContext";
 
 export default function LobbyAmbientAudio() {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { playTrack } = useAudio();
 
   useEffect(() => {
-    const audio = new Audio("/audio/musicafondo.mp3");
-
-    audio.loop = true;
-    audio.volume = 0.10; 
-    audioRef.current = audio;
-
-    const playAudio = async () => {
-      try {
-        await audio.play();
-      } catch {
-       
-        const resume = () => {
-          audio.play();
-          window.removeEventListener("click", resume);
-        };
-        window.addEventListener("click", resume);
-      }
-    };
-
-    playAudio();
-
-    return () => {
-      audio.pause();
-      audio.currentTime = 0;
-    };
-  }, []);
+    // Delegates audio creation and playback entirely to the global context.
+    // The context holds a single Audio instance — navigating between screens
+    // won't create a second one or cut off the current one.
+    playTrack("/audio/musicafondo.mp3");
+    // No cleanup: the audio lives in the context, not in this component.
+    // It will keep playing when this component unmounts (screen change).
+  }, [playTrack]);
 
   return null;
 }

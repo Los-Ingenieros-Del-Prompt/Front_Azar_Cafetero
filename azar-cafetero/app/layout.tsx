@@ -3,6 +3,7 @@ import { Josefin_Sans } from "next/font/google";
 import "./globals.css";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { UserProvider } from "../context/UserContext";
+import { AudioProvider } from "../context/AudioContext";
 
 const josefin = Josefin_Sans({ subsets: ["latin"], weight: ["400", "500", "700"] });
 
@@ -19,7 +20,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <GoogleOAuthProvider clientId={googleClientId}>
           <UserProvider>
-            {children}
+            <AudioProvider>
+              {children}
+            </AudioProvider>
           </UserProvider>
         </GoogleOAuthProvider>
       </body>
