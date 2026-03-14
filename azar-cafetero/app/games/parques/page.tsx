@@ -1,8 +1,8 @@
 "use client";
-
 import { useState } from "react";
 import { User, DollarSign, Home, LogOut, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
+import MuteButton from "@/components/common/MuteButton";
 
 type Room = {
   id: number;
@@ -20,9 +20,7 @@ const BottleIcon = ({ className }: { className?: string }) => (
 
 export default function ParquesFloor() {
   const router = useRouter();
-
   const [rooms] = useState<Room[]>([
-  
     { id: 3, name: "Sala 3", players: 8, max: 10 },
     { id: 2, name: "Sala 2", players: 2, max: 10 },
     { id: 1, name: "Sala 1", players: 5, max: 10 },
@@ -34,24 +32,25 @@ export default function ParquesFloor() {
 
   return (
     <div className="relative min-h-screen w-full font-sans text-white overflow-hidden bg-slate-900">
-      
       {/* background */}
-
       <div
-  className="absolute inset-0 z-0 bg-cover bg-no-repeat"
-  style={{
-    backgroundImage: `
-      linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.5)),
-      url('/images/backgroundparques.jpg')
-    `,
-    backgroundPosition: "center 30%",
-  }}
-/>
+        className="absolute inset-0 z-0 bg-cover bg-no-repeat"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.5)),
+            url('/images/backgroundparques.jpg')
+          `,
+          backgroundPosition: "center 30%",
+        }}
+      />
+
       {/* sidebar */}
       <nav className="absolute left-6 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-8 p-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full shadow-2xl">
         <button className="p-2 hover:bg-white/20 rounded-full"><User size={24} /></button>
         <button className="p-2 hover:bg-white/20 rounded-full"><DollarSign size={24} /></button>
         <button onClick={() => router.push("/lobby")} className="p-2 hover:bg-white/20 rounded-full"><Home size={24} /></button>
+        <div className="h-px bg-white/20 w-8 self-center my-2" />
+        <MuteButton variant="sidebar" />
         <div className="h-px bg-white/20 w-8 self-center my-2" />
         <button className="p-2 hover:bg-white/20 rounded-full text-red-400"><LogOut size={24} /></button>
       </nav>
@@ -72,15 +71,10 @@ export default function ParquesFloor() {
               onClick={() => enterRoom(room.id)}
             >
               <div className="absolute bottom-2 w-24 h-4 bg-black/20 blur-xl rounded-full scale-x-150" />
-
               <div className="relative z-10 w-25 drop-shadow-2xl">
                 <BottleIcon className="text-white opacity-95 group-hover:text-green-50 transition" />
-
                 <div className="absolute inset-0 flex flex-col items-center justify-center pt-16 text-slate-900">
-                  <span className="text-xl font-black uppercase">
-                    {room.name}
-                  </span>
-
+                  <span className="text-xl font-black uppercase">{room.name}</span>
                   <span className="text-lg font-bold">
                     <span className={room.players > 7 ? "text-red-600" : "text-green-600"}>
                       {room.players}
@@ -88,7 +82,6 @@ export default function ParquesFloor() {
                     /{room.max}
                   </span>
                 </div>
-
                 <button className="absolute -right-4 bottom-6 bg-green-900 p-3 rounded-2xl shadow-xl group-hover:scale-110">
                   <ArrowRight size={20} />
                 </button>
