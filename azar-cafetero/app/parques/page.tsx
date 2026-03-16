@@ -1,15 +1,23 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { User, DollarSign, Home, LogOut, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import MuteButton from "@/components/common/MuteButton";
+import { fetchGameRooms, type GameRoom } from "@/lib/gameTablesApi";
 
 type Room = {
-  id: number;
+  id: string;
   name: string;
   players: number;
   max: number;
 };
+
+const MAX_PLAYERS = 10;
+const FALLBACK_ROOMS: Room[] = [
+  { id: "3", name: "Sala 3", players: 8, max: MAX_PLAYERS },
+  { id: "2", name: "Sala 2", players: 2, max: MAX_PLAYERS },
+  { id: "1", name: "Sala 1", players: 5, max: MAX_PLAYERS },
+];
 
 const BottleIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 100 200" className={className} fill="currentColor">
@@ -20,13 +28,30 @@ const BottleIcon = ({ className }: { className?: string }) => (
 
 export default function ParquesFloor() {
   const router = useRouter();
-  const [rooms] = useState<Room[]>([
-    { id: 3, name: "Sala 3", players: 8, max: 10 },
-    { id: 2, name: "Sala 2", players: 2, max: 10 },
-    { id: 1, name: "Sala 1", players: 5, max: 10 },
-  ]);
+  const [rooms, setRooms] = useState<Room[]>(FALLBACK_ROOMS);
 
-  const enterRoom = (id: number) => {
+  useEffect(() => {
+    fetchGameRooms()
+      .then((tables: GameRoom[]) => {
+        if (!tables.length) {
+          setRooms(FALLBACK_ROOMS);
+          return;
+        }
+        setRooms(
+          tables.map((table) => ({
+            id: table.id,
+            name: table.name,
+            players: table.players,
+            max: MAX_PLAYERS,
+          }))
+        );
+      })
+      .catch(() => {
+        setRooms(FALLBACK_ROOMS);
+      });
+  }, []);
+
+  const enterRoom = (id: string) => {
     router.push(`/parques/room/${id}`);
   };
 

@@ -601,6 +601,10 @@
     display: none;
   }
 
+  .table {
+    display: table;
+  }
+
   .h-4 {
     height: calc(var(--spacing) * 4);
   }

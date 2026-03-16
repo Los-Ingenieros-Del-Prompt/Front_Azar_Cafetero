@@ -1,15 +1,23 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { User, DollarSign, Home, LogOut, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import MuteButton from "@/components/common/MuteButton";
+import { fetchGameRooms, type GameRoom } from "@/lib/gameTablesApi";
 
 type Room = {
-  id: number;
+  id: string;
   name: string;
   players: number;
   max: number;
 };
+
+const MAX_PLAYERS = 4;
+const FALLBACK_ROOMS: Room[] = [
+  { id: "3", name: "Mesa 3", players: 3, max: MAX_PLAYERS },
+  { id: "2", name: "Mesa 2", players: 1, max: MAX_PLAYERS },
+  { id: "1", name: "Mesa 1", players: 2, max: MAX_PLAYERS },
+];
 
 const BottleIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 100 200" className={className} fill="currentColor">
@@ -20,13 +28,30 @@ const BottleIcon = ({ className }: { className?: string }) => (
 
 export default function BriscaFloor() {
   const router = useRouter();
-  const [rooms] = useState<Room[]>([
-    { id: 3, name: "Mesa 3", players: 3, max: 4 },
-    { id: 2, name: "Mesa 2", players: 1, max: 4 },
-    { id: 1, name: "Mesa 1", players: 2, max: 4 },
-  ]);
+  const [rooms, setRooms] = useState<Room[]>(FALLBACK_ROOMS);
 
-  const enterRoom = (id: number) => {
+  useEffect(() => {
+    fetchGameRooms()
+      .then((tables: GameRoom[]) => {
+        if (!tables.length) {
+          setRooms(FALLBACK_ROOMS);
+          return;
+        }
+        setRooms(
+          tables.map((table) => ({
+            id: table.id,
+            name: table.name,
+            players: table.players,
+            max: MAX_PLAYERS,
+          }))
+        );
+      })
+      .catch(() => {
+        setRooms(FALLBACK_ROOMS);
+      });
+  }, []);
+
+  const enterRoom = (id: string) => {
     router.push(`/brisca/room/${id}`);
   };
 
