@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { User, DollarSign, Home, LogOut, ArrowRight } from "lucide-react";
+import { User, DollarSign, Home, LogOut, ArrowRight, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import MuteButton from "@/components/common/MuteButton";
-import { fetchGameRooms, type GameRoom } from "@/lib/gameTablesApi";
+import { fetchGameRooms, createTable, type GameRoom } from "@/lib/gameTablesApi";
 
 type Room = {
   id: string;
@@ -29,6 +29,11 @@ const BottleIcon = ({ className }: { className?: string }) => (
 export default function ParquesFloor() {
   const router = useRouter();
   const [rooms, setRooms] = useState<Room[]>(FALLBACK_ROOMS);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [tableName, setTableName] = useState("");
+  const [requiredBet, setRequiredBet] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetchGameRooms()
@@ -50,6 +55,36 @@ export default function ParquesFloor() {
         setRooms(FALLBACK_ROOMS);
       });
   }, []);
+
+  const handleCreateTable = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!tableName.trim()) {
+      setError("El nombre de la mesa es requerido");
+      return;
+    }
+
+    if (!requiredBet || isNaN(Number(requiredBet)) || Number(requiredBet) <= 0) {
+      setError("La apuesta requerida debe ser un número mayor a 0");
+      return;
+    }
+
+    setIsCreating(true);
+
+    try {
+      const newRoom = await createTable(tableName.trim(), Number(requiredBet));
+      setRooms([...rooms, { ...newRoom, max: MAX_PLAYERS }]);
+      setIsModalOpen(false);
+      setTableName("");
+      setRequiredBet("");
+    } catch (err) {
+      setError("Error al crear la mesa. Intenta de nuevo.");
+      console.error(err);
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const enterRoom = (id: string) => {
     router.push(`/parques/room/${id}`);
@@ -88,6 +123,14 @@ export default function ParquesFloor() {
           <h1 className="text-7xl font-bold tracking-tight">Elige Tu Sala</h1>
         </header>
 
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="mb-8 flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition shadow-lg"
+        >
+          <Plus size={20} />
+          Crear Nueva Mesa
+        </button>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 w-full max-w-5xl">
           {rooms.map((room) => (
             <div
@@ -115,6 +158,96 @@ export default function ParquesFloor() {
           ))}
         </div>
       </main>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-slate-800 rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white">Crear Nueva Mesa</h2>
+              <button
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setError("");
+                  setTableName("");
+                  setRequiredBet("");
+                }}
+                className="text-gray-400 hover:text-white transition"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateTable} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-200 mb-2">
+                  Nombre de la Mesa
+                </label>
+                <input
+                  type="text"
+                  value={tableName}
+                  onChange={(e) => setTableName(e.target.value)}
+                  placeholder="Ej: Mesa VIP"
+                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                  disabled={isCreating}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-200 mb-2">
+                  Apuesta Requerida
+                </label>
+                <input
+                  type="number"
+                  value={requiredBet}
+                  onChange={(e) => setRequiredBet(e.target.value)}
+                  placeholder="Ej: 50.0"
+                  step="0.01"
+                  min="0"
+                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                  disabled={isCreating}
+                />
+              </div>
+
+              {error && (
+                <div className="p-3 bg-red-500/20 border border-red-500 rounded text-red-200 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex gap-4 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setError("");
+                    setTableName("");
+                    setRequiredBet("");
+                  }}
+                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-lg transition"
+                  disabled={isCreating}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  disabled={isCreating}
+                >
+                  {isCreating ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Creando...
+                    </>
+                  ) : (
+                    "Crear Mesa"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
