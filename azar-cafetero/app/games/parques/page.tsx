@@ -27,7 +27,7 @@ export default function ParquesFloor() {
   ]);
 
   const enterRoom = (id: number) => {
-    router.push(`/parques/room/${id}`);
+    router.push("/games/parques/table");
   };
 
   return (
