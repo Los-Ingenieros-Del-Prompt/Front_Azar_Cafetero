@@ -19,13 +19,6 @@ const FALLBACK_ROOMS: Room[] = [
   { id: "1", name: "Mesa 1", players: 2, max: MAX_PLAYERS },
 ];
 
-const BottleIcon = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 100 200" className={className} fill="currentColor">
-    <path d="M30 40 C 30 20, 70 20, 70 40 L 70 60 C 70 80, 90 90, 90 120 L 90 180 C 90 195, 80 200, 50 200 C 20 200, 10 195, 10 180 L 10 120 C 10 90, 30 80, 30 60 Z" />
-    <rect x="40" y="10" width="20" height="15" rx="2" />
-  </svg>
-);
-
 export default function BriscaFloor() {
   const router = useRouter();
   const [rooms, setRooms] = useState<Room[]>(FALLBACK_ROOMS);
@@ -88,29 +81,35 @@ export default function BriscaFloor() {
           <h1 className="text-7xl font-bold tracking-tight">Elige Tu Mesa</h1>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 w-full max-w-5xl">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
           {rooms.map((room) => (
             <div
               key={room.id}
-              className="group relative flex flex-col items-center justify-end h-50 cursor-pointer hover:-translate-y-2 transition"
+              className="group relative cursor-pointer rounded-2xl border border-white/20 bg-white/10 p-6 backdrop-blur-xl shadow-xl transition hover:-translate-y-1 hover:bg-white/15"
               onClick={() => enterRoom(room.id)}
             >
-              <div className="absolute bottom-2 w-24 h-4 bg-black/20 blur-xl rounded-full scale-x-150" />
-              <div className="relative z-10 w-25 drop-shadow-2xl">
-                <BottleIcon className="text-white opacity-95 group-hover:text-yellow-50 transition" />
-                <div className="absolute inset-0 flex flex-col items-center justify-center pt-16 text-slate-900">
-                  <span className="text-xl font-black uppercase">{room.name}</span>
-                  <span className="text-lg font-bold">
-                    <span className={room.players > 3 ? "text-red-600" : "text-green-600"}>
-                      {room.players}
-                    </span>
-                    /{room.max}
-                  </span>
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-2xl font-bold tracking-tight">{room.name}</h3>
+                  <p className="text-sm text-white/70">Mesa de Brisca</p>
                 </div>
-                <button className="absolute -right-4 bottom-6 bg-yellow-700 p-3 rounded-2xl shadow-xl group-hover:scale-110">
-                  <ArrowRight size={20} />
-                </button>
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                    room.players > 3
+                      ? "bg-red-500/20 text-red-200 border border-red-400/40"
+                      : "bg-emerald-500/20 text-emerald-200 border border-emerald-400/40"
+                  }`}
+                >
+                  {room.players}/{room.max} jugadores
+                </span>
               </div>
+
+              <div className="h-px w-full bg-white/15" />
+
+              <button className="mt-5 flex w-full items-center justify-between rounded-xl bg-yellow-700/90 px-4 py-3 text-sm font-semibold text-white shadow-lg transition group-hover:bg-yellow-600">
+                Entrar a la mesa
+                <ArrowRight size={18} />
+              </button>
             </div>
           ))}
         </div>
