@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Background from "../components/common/Background";
@@ -8,17 +7,16 @@ import LoginHero from "../components/login/LoginHero";
 import { useUserContext } from "../context/UserContext";
 
 export default function HomePage() {
-  const { token, isLoading } = useUserContext();
+  const { user, isLoading } = useUserContext();
   const router = useRouter();
 
-  // Si ya tiene sesión activa, redirige directamente al lobby
   useEffect(() => {
-    if (!isLoading && token) {
+    if (!isLoading && user) {
       router.replace("/lobby");
     }
-  }, [token, isLoading, router]);
+  }, [user, isLoading, router]);
 
-  if (isLoading) return null; // evita flash de login si ya hay sesión
+  if (isLoading) return null;
 
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center font-sans overflow-hidden">
