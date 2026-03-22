@@ -1,0 +1,19 @@
+   import { useEffect } from 'react';
+   import Stomp from 'stompjs';
+   import SockJS from 'sockjs-client';
+ 
+   export const useTableConnection = (tableId: string) => {
+     useEffect(() => {
+       const socket = new SockJS(`http://localhost:8085/ws`);
+       const stompClient = Stomp.over(socket);
+ 
+       stompClient.connect({}, (frame) => {
+         // Subscribe to table messages
+         stompClient.subscribe(`/topic/table/${tableId}`, (msg) => {
+           console.log(JSON.parse(msg.body));
+         });
+       });
+ 
+       return () => stompClient.disconnect();
+     }, [tableId]);
+   };
