@@ -1,1 +1,41 @@
-hah
+name: Build & Deploy Frontend
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login a DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build y Push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./azar-cafetero
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/azar-front:latest
+          build-args: |
+            NEXT_PUBLIC_GATEWAY_URL=${{ secrets.NEXT_PUBLIC_GATEWAY_URL }}
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
+
+      - name: Deploy en EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/azar-front:latest
+            docker stop azar-front || true
+            docker rm azar-front || true
+            docker run -d --name azar-front --restart unless-stopped -p 3000:3000 -e NEXT_PUBLIC_GATEWAY_URL="${{ secrets.NEXT_PUBLIC_GATEWAY_URL }}" -e NEXT_PUBLIC_GOOGLE_CLIENT_ID="${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}" ${{ secrets.DOCKERHUB_USERNAME }}/azar-front:latest
