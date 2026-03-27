@@ -27,7 +27,7 @@ export default function BriscaFloor() {
   ]);
 
   const enterRoom = (id: number) => {
-    router.push(`/brisca/room/${id}`);
+    router.push(`/games/brisca/room/${id}`);
   };
 
   return (
