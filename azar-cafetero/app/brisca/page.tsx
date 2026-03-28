@@ -6,9 +6,25 @@ import MuteButton from "@/components/common/MuteButton";
 import { useUserContext } from "@/context/UserContext";
 import { useGameWebSocket, TableDTO } from "@/hooks/useGameWebSocket";
 
+// BottleIcon component
+const BottleIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 100 200" className={className} fill="currentColor">
+    <path d="M30 40 C 30 20, 70 20, 70 40 L 70 60 C 70 80, 90 90, 90 120 L 90 180 C 90 195, 80 200, 50 200 C 20 200, 10 195, 10 180 L 10 120 C 10 90, 30 80, 30 60 Z" />
+    <rect x="40" y="10" width="20" height="15" rx="2" />
+  </svg>
+);
+
 const BRISCA_FLOOR_ID = "brisca-floor-1"; // Floor identifier for WebSocket
 
 const MAX_PLAYERS = 4;
+
+interface Room {
+  id: string;
+  name: string;
+  players: number;
+  max: number;
+}
+
 const FALLBACK_ROOMS: Room[] = [
   { id: "3", name: "Mesa 3", players: 3, max: MAX_PLAYERS },
   { id: "2", name: "Mesa 2", players: 1, max: MAX_PLAYERS },
@@ -178,12 +194,12 @@ export default function BriscaFloor() {
                 </div>
                 <span
                   className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                    room.players > 3
+                    table.playerCount > 3
                       ? "bg-red-500/20 text-red-200 border border-red-400/40"
                       : "bg-emerald-500/20 text-emerald-200 border border-emerald-400/40"
                   }`}
                 >
-                  {room.players}/{room.max} jugadores
+                  {table.playerCount}/{table.maxPlayers || 4} jugadores
                 </span>
               </div>
 
