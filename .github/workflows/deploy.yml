@@ -27,6 +27,7 @@ jobs:
           build-args: |
             NEXT_PUBLIC_GATEWAY_URL=${{ secrets.NEXT_PUBLIC_GATEWAY_URL }}
             NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
+            NEXT_PUBLIC_BRISCA_WS_URL=${{ secrets.NEXT_PUBLIC_BRISCA_WS_URL }}
 
       - name: Deploy en EC2
         uses: appleboy/ssh-action@v1
@@ -38,4 +39,8 @@ jobs:
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/azar-front:latest
             docker stop azar-front || true
             docker rm azar-front || true
-            docker run -d --name azar-front --restart unless-stopped -p 3000:3000 -e NEXT_PUBLIC_GATEWAY_URL="${{ secrets.NEXT_PUBLIC_GATEWAY_URL }}" -e NEXT_PUBLIC_GOOGLE_CLIENT_ID="${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}" ${{ secrets.DOCKERHUB_USERNAME }}/azar-front:latest
+            docker run -d --name azar-front --restart unless-stopped -p 3000:3000 \
+              -e NEXT_PUBLIC_GATEWAY_URL="${{ secrets.NEXT_PUBLIC_GATEWAY_URL }}" \
+              -e NEXT_PUBLIC_GOOGLE_CLIENT_ID="${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}" \
+              -e NEXT_PUBLIC_BRISCA_WS_URL="${{ secrets.NEXT_PUBLIC_BRISCA_WS_URL }}" \
+              ${{ secrets.DOCKERHUB_USERNAME }}/azar-front:latest
