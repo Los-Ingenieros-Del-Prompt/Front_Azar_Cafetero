@@ -57,8 +57,8 @@ interface UseGameWebSocketOptions {
   onError?: (error: string) => void;
 }
 
-const GAME_WS_URL = process.env.NEXT_PUBLIC_GAME_WS_URL ?? "http://localhost:8085/ws";
-const GAME_API_URL = process.env.NEXT_PUBLIC_GAME_API_URL ?? "http://localhost:8085";
+const GAME_WS_URL = process.env.NEXT_PUBLIC_GAME_WS_URL ?? "https://azar-cafetero.duckdns.org/ws";
+const GAME_API_URL = process.env.NEXT_PUBLIC_GAME_API_URL ?? "https://azar-cafetero.duckdns.org.com";
 
 export function useGameWebSocket(options: UseGameWebSocketOptions = {}) {
   const { url = GAME_WS_URL, onConnected, onDisconnected, onError } = options;
@@ -176,7 +176,6 @@ export function useGameWebSocket(options: UseGameWebSocketOptions = {}) {
     const response = await fetch(`${GAME_API_URL}/api/tables`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ tableName, requiredBet, maxPlayers }),
     });
     
@@ -191,9 +190,7 @@ export function useGameWebSocket(options: UseGameWebSocketOptions = {}) {
 
   // Fetch all tables (REST API)
   const fetchTables = useCallback(async (): Promise<TableDTO[]> => {
-    const response = await fetch(`${GAME_API_URL}/api/tables`, {
-      credentials: "include",
-    });
+    const response = await fetch(`${GAME_API_URL}/api/tables`);
     
     if (!response.ok) {
       throw new Error("Failed to fetch tables");
