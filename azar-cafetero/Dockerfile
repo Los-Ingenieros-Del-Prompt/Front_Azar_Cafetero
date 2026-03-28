@@ -1,4 +1,3 @@
-GNU nano 8.1                                    /home/karol/AzarCafetero/Front_Azar_Cafetero/azar-cafetero/Dockerfile                                                 
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
