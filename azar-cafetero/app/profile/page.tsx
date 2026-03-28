@@ -8,30 +8,36 @@ import { useUserContext } from "@/context/UserContext";
 import { getProfileStatus, updateAvatar, updateUsername } from "@/lib/profileApi";
 
 export default function ProfilePage() {
-  const router = useRouter();
-  const { user, isLoading: authLoading } = useUserContext();
-  const [selectedAvatarUrl, setSelectedAvatarUrl] = useState("");
-  const [username, setUsername] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState<"success" | "error">("success");
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+    const router = useRouter();
+    const { user, isLoading: authLoading } = useUserContext();
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-    getProfileStatus()
-      .then((data) => {
-        setSelectedAvatarUrl(data.avatarUrl);
-        setUsername(data.username);
-      })
-      .catch(() => router.push("/login"))
-      .finally(() => setLoading(false));
-  }, [authLoading, user]);
+    const [selectedAvatarUrl, setSelectedAvatarUrl] = useState("");
+    const [username, setUsername] = useState("");
+
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+
+    const [message, setMessage] = useState("");
+    const [messageType, setMessageType] = useState<"success" | "error">("success");
+    const [suggestions, setSuggestions] = useState<string[]>([]);
+
+    useEffect(() => {
+        if (authLoading) return;
+
+        if (!user) {
+            router.push("/login");
+            return;
+        }
+
+        getProfileStatus()
+            .then((data) => {
+                setSelectedAvatarUrl(data.avatarUrl);
+                setUsername(data.username);
+            })
+            .catch(() => router.push("/login"))
+            .finally(() => setLoading(false));
+
+    }, [authLoading, user, router]);
 
   async function handleGuardar() {
     setSaving(true);
