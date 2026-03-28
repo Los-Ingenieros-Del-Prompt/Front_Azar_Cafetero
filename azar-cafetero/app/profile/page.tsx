@@ -9,7 +9,7 @@ import { getProfileStatus, updateAvatar, updateUsername } from "@/lib/profileApi
 
 export default function ProfilePage() {
     const router = useRouter();
-    const { token, isLoading: authLoading } = useUserContext();
+    const { user, isLoading: authLoading } = useUserContext();
 
     const [selectedAvatarUrl, setSelectedAvatarUrl] = useState("");
     const [username, setUsername] = useState("");
@@ -24,7 +24,7 @@ export default function ProfilePage() {
     useEffect(() => {
         if (authLoading) return;
 
-        if (!token) {
+        if (!user) {
             router.push("/login");
             return;
         }
@@ -37,7 +37,7 @@ export default function ProfilePage() {
             .catch(() => router.push("/login"))
             .finally(() => setLoading(false));
 
-    }, [authLoading, token]);
+    }, [authLoading, user, router]);
 
     async function handleGuardar() {
         setSaving(true);
