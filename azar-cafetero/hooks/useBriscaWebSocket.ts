@@ -47,7 +47,7 @@ interface UseBriscaWebSocketOptions {
   onError?: (error: string) => void;
 }
 
-const BRISCA_WS_URL = process.env.NEXT_PUBLIC_BRISCA_WS_URL ?? "https://azar-cafetero.duckdns.org/brisca";
+const BRISCA_WS_URL = process.env.NEXT_PUBLIC_BRISCA_WS_URL ?? "https://azar-cafetero.duckdns.org/api/brisca/ws";
 
 export function useBriscaWebSocket(options: UseBriscaWebSocketOptions = {}) {
   const { url = BRISCA_WS_URL, onConnected, onDisconnected, onError } = options;
@@ -60,10 +60,16 @@ export function useBriscaWebSocket(options: UseBriscaWebSocketOptions = {}) {
 
   const subscribedGameIdRef = useRef<string | null>(null);
   const gameSubscriptionsRef = useRef<Map<string, any>>(new Map());
+  const isConnectingRef = useRef(false); // Prevent multiple connection attempts
 
   const connect = useCallback(() => {
-    if (clientRef.current?.connected) return;
+    // Prevent multiple simultaneous connection attempts
+    if (clientRef.current?.connected || isConnectingRef.current) {
+      console.log("[Brisca WS] Already connected or connecting, skipping...");
+      return;
+    }
 
+    isConnectingRef.current = true;
     console.log("[Brisca WS] Attempting to connect to:", url);
     setConnectionStatus("connecting");
     setError(null);
@@ -78,12 +84,14 @@ export function useBriscaWebSocket(options: UseBriscaWebSocketOptions = {}) {
       },
       onConnect: () => {
         console.log("[Brisca WS] Connected");
+        isConnectingRef.current = false; // Reset flag
         setIsConnected(true);
         setConnectionStatus("connected");
         onConnected?.();
       },
       onDisconnect: () => {
         console.log("[Brisca WS] Disconnected");
+        isConnectingRef.current = false; // Reset flag
         setIsConnected(false);
         setConnectionStatus("disconnected");
         subscribedGameIdRef.current = null;
@@ -92,11 +100,13 @@ export function useBriscaWebSocket(options: UseBriscaWebSocketOptions = {}) {
       onStompError: (frame) => {
         const errorMsg = frame.headers["message"] || "WebSocket error";
         console.error("[Brisca WS] STOMP Error:", errorMsg);
+        isConnectingRef.current = false; // Reset flag
         setError(errorMsg);
         onError?.(errorMsg);
       },
       onWebSocketError: (event) => {
         console.error("[Brisca WS] WebSocket Error:", event);
+        isConnectingRef.current = false; // Reset flag
         setError("WebSocket connection error");
         onError?.("WebSocket connection error");
       },
@@ -113,6 +123,7 @@ export function useBriscaWebSocket(options: UseBriscaWebSocketOptions = {}) {
       setIsConnected(false);
       setConnectionStatus("disconnected");
       subscribedGameIdRef.current = null;
+      isConnectingRef.current = false; // Reset flag
     }
   }, []);
 

@@ -254,10 +254,11 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName }: Bris
     onError: (err) => console.error("[Brisca] Error:", err),
   });
 
-  // Connect on mount
+  // Connect on mount - ONLY ONCE
   useEffect(() => {
     connect();
-  }, [connect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - connect only on mount
 
   // Auto-create or join game when connected (ONLY ONCE)
   useEffect(() => {
