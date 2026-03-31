@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { RotateCcw, Home, LogOut, User, DollarSign, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import MuteButton from "@/components/common/MuteButton";
@@ -237,6 +237,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName }: Bris
   const [playerId] = useState(() => `player-${Math.random().toString(36).slice(2, 8)}`);
   const [playerName] = useState(() => userName || `Jugador${Math.floor(Math.random() * 1000)}`);
   const [gameId] = useState(() => propGameId || "test-game-1");
+  const hasJoinedRef = useRef(false); // Track if we've already joined
 
   const {
     isConnected,
@@ -258,9 +259,9 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName }: Bris
     connect();
   }, [connect]);
 
-  // Auto-create or join game when connected
+  // Auto-create or join game when connected (ONLY ONCE)
   useEffect(() => {
-    if (!isConnected) return;
+    if (!isConnected || hasJoinedRef.current) return;
 
     const initGame = async () => {
       try {
@@ -270,15 +271,16 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName }: Bris
         console.log("[Brisca] Error creating game:", e);
       }
       joinGame(gameId, playerId, playerName);
+      hasJoinedRef.current = true; // Mark as joined
       
-      // Request game state after a brief delay to ensure we have latest
+      // Request game state after joining
       setTimeout(() => {
         requestGameState(gameId);
       }, 300);
     };
 
     initGame();
-  }, [isConnected, gameId, playerId, playerName, createGame, joinGame, requestGameState]);
+  }, [isConnected]); // ONLY depend on isConnected, not on the functions!
 
   // Convert backend state to local format
   const { players, trumpCard, trumpSuit, remainingCards, currentPlayerId, currentTrick, phase, winner } = useMemo(() => {
