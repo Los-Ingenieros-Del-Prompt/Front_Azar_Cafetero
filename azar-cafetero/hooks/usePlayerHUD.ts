@@ -8,7 +8,7 @@ export interface PlayerIdentity {
 }
 
 // Apunta al gateway, no al lobby directamente
-const API = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+const API = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "https://azar-cafetero.duckdns.org";
 
 async function fetchIdentity(): Promise<PlayerIdentity> {
   const res = await fetch(`${API}/api/player/identity`, {

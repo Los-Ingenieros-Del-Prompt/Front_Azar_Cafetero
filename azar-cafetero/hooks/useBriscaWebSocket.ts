@@ -47,7 +47,7 @@ interface UseBriscaWebSocketOptions {
   onError?: (error: string) => void;
 }
 
-const BRISCA_WS_URL = process.env.NEXT_PUBLIC_BRISCA_WS_URL ?? "http://localhost:8080/brisca/ws";
+const BRISCA_WS_URL = process.env.NEXT_PUBLIC_BRISCA_WS_URL ?? "https://azar-cafetero.duckdns.org/brisca/ws";
 
 export function useBriscaWebSocket(options: UseBriscaWebSocketOptions = {}) {
   const { url = BRISCA_WS_URL, onConnected, onDisconnected, onError } = options;
