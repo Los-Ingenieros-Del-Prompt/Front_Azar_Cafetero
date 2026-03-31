@@ -4,7 +4,7 @@
  
    export const useTableConnection = (tableId: string) => {
      useEffect(() => {
-       const socket = new SockJS(`https://azar-cafetero.duckdns.org/game/ws`);
+       const socket = new SockJS(`https://azar-cafetero.duckdns.org/ws`);
        const stompClient = Stomp.over(socket);
  
        stompClient.connect({}, (frame) => {
