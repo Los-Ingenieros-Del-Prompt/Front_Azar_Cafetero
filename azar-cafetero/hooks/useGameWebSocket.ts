@@ -57,8 +57,8 @@ interface UseGameWebSocketOptions {
   onError?: (error: string) => void;
 }
 
-const GAME_WS_URL = process.env.NEXT_PUBLIC_GAME_WS_URL ?? "https://azar-cafetero.duckdns.org/ws";
-const GAME_API_URL = process.env.NEXT_PUBLIC_GAME_API_URL ?? "https://azar-cafetero.duckdns.org";
+const GAME_WS_URL = process.env.NEXT_PUBLIC_GAME_WS_URL ?? "http://localhost:8080/game/ws";
+const GAME_API_URL = process.env.NEXT_PUBLIC_GAME_API_URL ?? "http://localhost:8080/game";
 
 export function useGameWebSocket(options: UseGameWebSocketOptions = {}) {
   const { url = GAME_WS_URL, onConnected, onDisconnected, onError } = options;
@@ -134,7 +134,12 @@ export function useGameWebSocket(options: UseGameWebSocketOptions = {}) {
       try {
         const event = JSON.parse(message.body);
         console.log("[Game WS] Floor event:", event);
-        setFloorEvents(prev => [...prev, event]);
+        
+        // Limit event history to last 100 events to prevent memory leaks
+        setFloorEvents(prev => {
+          const updated = [...prev, event];
+          return updated.slice(-100);
+        });
         
         // Update tables based on events
         if (event.type === "TABLE_CREATED") {
@@ -221,6 +226,19 @@ export function useGameWebSocket(options: UseGameWebSocketOptions = {}) {
     }
 
     console.log("[Game WS] Joining table:", { tableId, playerId, playerName });
+    
+    // Debounce rapid join attempts - prevent duplicate requests
+    const joinKey = `${tableId}-${playerId}`;
+    const now = Date.now();
+    const lastJoinAttempt = (client as any).lastJoinAttempt || {};
+    
+    if (lastJoinAttempt[joinKey] && now - lastJoinAttempt[joinKey] < 1000) {
+      console.warn("[Game WS] Ignoring duplicate join request (debounced)");
+      return;
+    }
+    
+    (client as any).lastJoinAttempt = { ...lastJoinAttempt, [joinKey]: now };
+    
     client.publish({
       destination: `/app/table/${tableId}/join`,
       body: JSON.stringify({ playerId, playerName, tableId, balance }),

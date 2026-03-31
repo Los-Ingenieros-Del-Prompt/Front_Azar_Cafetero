@@ -47,7 +47,7 @@ interface UseBriscaWebSocketOptions {
   onError?: (error: string) => void;
 }
 
-const BRISCA_WS_URL = process.env.NEXT_PUBLIC_BRISCA_WS_URL ?? "https://azar-cafetero.duckdns.org:8089/ws";
+const BRISCA_WS_URL = process.env.NEXT_PUBLIC_BRISCA_WS_URL ?? "http://localhost:8080/brisca/ws";
 
 export function useBriscaWebSocket(options: UseBriscaWebSocketOptions = {}) {
   const { url = BRISCA_WS_URL, onConnected, onDisconnected, onError } = options;
@@ -59,6 +59,7 @@ export function useBriscaWebSocket(options: UseBriscaWebSocketOptions = {}) {
   const [connectionStatus, setConnectionStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
 
   const subscribedGameIdRef = useRef<string | null>(null);
+  const gameSubscriptionsRef = useRef<Map<string, any>>(new Map());
 
   const connect = useCallback(() => {
     if (clientRef.current?.connected) return;
@@ -170,18 +171,30 @@ export function useBriscaWebSocket(options: UseBriscaWebSocketOptions = {}) {
       return;
     }
 
-    // Subscribe first
-    subscribeToGame(gameId);
+    console.log("[Brisca WS] Joining game:", { gameId, playerId, playerName });
+    
+    // Subscribe to game topic first
+    const subscription = client.subscribe(`/topic/game/${gameId}`, (message: IMessage) => {
+      try {
+        const state = JSON.parse(message.body) as GameStateDTO;
+        console.log("[Brisca WS] Game state update:", state);
+        setGameState(state);
+      } catch (e) {
+        console.error("[Brisca WS] Failed to parse game state:", e);
+      }
+    });
 
-    // Small delay to ensure subscription is ready
-    setTimeout(() => {
-      console.log("[Brisca WS] Joining game:", { gameId, playerId, playerName });
-      client.publish({
-        destination: `/app/game/${gameId}/join`,
-        body: JSON.stringify({ gameId, playerId, playerName }),
-      });
-    }, 100);
-  }, [subscribeToGame]);
+    // Store subscription for cleanup
+    if (!gameSubscriptionsRef.current.has(gameId)) {
+      gameSubscriptionsRef.current.set(gameId, subscription);
+    }
+
+    // Send join message after subscription is established
+    client.publish({
+      destination: `/app/game/${gameId}/join`,
+      body: JSON.stringify({ gameId, playerId, playerName }),
+    });
+  }, []);
 
   // Start the game
   const startGame = useCallback((gameId: string) => {
