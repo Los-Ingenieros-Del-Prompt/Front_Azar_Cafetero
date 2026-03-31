@@ -178,7 +178,7 @@ export function useGameWebSocket(options: UseGameWebSocketOptions = {}) {
     requiredBet: number, 
     maxPlayers: number = 4
   ): Promise<TableDTO> => {
-    const response = await fetch(`${GAME_API_URL}/api/tables`, {
+    const response = await fetch(`${GAME_API_URL}/game/api/tables`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tableName, requiredBet, maxPlayers }),
@@ -195,7 +195,7 @@ export function useGameWebSocket(options: UseGameWebSocketOptions = {}) {
 
   // Fetch all tables (REST API)
   const fetchTables = useCallback(async (): Promise<TableDTO[]> => {
-    const response = await fetch(`${GAME_API_URL}/api/tables`);
+    const response = await fetch(`${GAME_API_URL}/game/api/tables`);
     
     if (!response.ok) {
       throw new Error("Failed to fetch tables");

@@ -1,4 +1,4 @@
-const GAME_BASE_URL = process.env.NEXT_PUBLIC_GAME_URL ?? "http://localhost:8085";
+const GAME_BASE_URL = process.env.NEXT_PUBLIC_GAME_API_URL ?? "https://azar-cafetero.duckdns.org";
 
 interface GameTableDTO {
   tableId: string;
@@ -13,7 +13,7 @@ export interface GameRoom {
 }
 
 export async function fetchGameRooms(): Promise<GameRoom[]> {
-  const res = await fetch(`${GAME_BASE_URL}/api/tables`);
+  const res = await fetch(`${GAME_BASE_URL}/game/api/tables`);
   if (!res.ok) {
     throw new Error(`Failed to load game tables: ${res.status}`);
   }
@@ -27,7 +27,7 @@ export async function fetchGameRooms(): Promise<GameRoom[]> {
 }
 
 export async function createTable(tableName: string, requiredBet: number): Promise<GameRoom> {
-  const res = await fetch(`${GAME_BASE_URL}/api/tables`, {
+  const res = await fetch(`${GAME_BASE_URL}/game/api/tables`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
