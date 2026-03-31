@@ -57,8 +57,8 @@ interface UseGameWebSocketOptions {
   onError?: (error: string) => void;
 }
 
-const GAME_WS_URL = process.env.NEXT_PUBLIC_GAME_WS_URL ?? "https://azar-cafetero.duckdns.org/game/ws";
-const GAME_API_URL = process.env.NEXT_PUBLIC_GAME_API_URL ?? "https://azar-cafetero.duckdns.org/game/api";
+const GAME_WS_URL = process.env.NEXT_PUBLIC_GAME_WS_URL ?? "https://azar-cafetero.duckdns.org/ws";
+const GAME_API_URL = process.env.NEXT_PUBLIC_GAME_API_URL ?? "https://azar-cafetero.duckdns.org";
 
 export function useGameWebSocket(options: UseGameWebSocketOptions = {}) {
   const { url = GAME_WS_URL, onConnected, onDisconnected, onError } = options;
