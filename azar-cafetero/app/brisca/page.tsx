@@ -14,7 +14,7 @@ const BottleIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-const BRISCA_FLOOR_ID = "brisca-floor-1"; // Floor identifier for WebSocket
+const BRISCA_FLOOR_ID = "00000000-0000-0000-0000-000000000002";
 
 const MAX_PLAYERS = 4;
 
