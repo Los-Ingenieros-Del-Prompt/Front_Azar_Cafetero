@@ -28,6 +28,8 @@ jobs:
             NEXT_PUBLIC_GATEWAY_URL=${{ secrets.NEXT_PUBLIC_GATEWAY_URL }}
             NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
             NEXT_PUBLIC_BRISCA_WS_URL=${{ secrets.NEXT_PUBLIC_BRISCA_WS_URL }}
+            NEXT_PUBLIC_GAME_WS_URL=${{ secrets.NEXT_PUBLIC_GAME_WS_URL }}
+            NEXT_PUBLIC_GAME_API_URL=${{ secrets.NEXT_PUBLIC_GAME_API_URL }}
 
       - name: Deploy en EC2
         uses: appleboy/ssh-action@v1
