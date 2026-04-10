@@ -18,6 +18,7 @@ export interface JoinTableDTO {
   playerName: string;
   tableId: string;
   balance?: number;
+  floorId?: string;
 }
 
 export interface TableMessageDTO {
@@ -50,6 +51,16 @@ export type FloorEvent =
   | { type: "PLAYER_JOINED"; data: PlayerJoinedEvent }
   | { type: "TABLE_CLOSED"; data: TableClosedEvent };
 
+interface BackendFloorEvent {
+  eventType: "TABLE_CREATED" | "PLAYER_JOINED" | "TABLE_CLOSED";
+  tableId: string;
+  tableName?: string;
+  maxPlayers?: number;
+  playerName?: string;
+  currentPlayers?: number;
+  availableSeats?: number;
+}
+
 interface UseGameWebSocketOptions {
   url?: string;
   onConnected?: () => void;
@@ -59,6 +70,50 @@ interface UseGameWebSocketOptions {
 
 const GAME_WS_URL = process.env.NEXT_PUBLIC_GAME_WS_URL ?? "https://azar-cafetero.duckdns.org/game/ws";
 const GAME_API_URL = process.env.NEXT_PUBLIC_GAME_API_URL ?? "https://azar-cafetero.duckdns.org";
+
+function normalizeFloorEvent(raw: unknown): FloorEvent | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const maybeTyped = raw as FloorEvent;
+  if ("type" in maybeTyped && "data" in maybeTyped) {
+    return maybeTyped;
+  }
+
+  const event = raw as BackendFloorEvent;
+  if (!event.eventType || !event.tableId) {
+    return null;
+  }
+
+  if (event.eventType === "TABLE_CREATED") {
+    return {
+      type: "TABLE_CREATED",
+      data: {
+        tableId: event.tableId,
+        tableName: event.tableName ?? event.tableId,
+        maxPlayers: event.maxPlayers ?? 4,
+      },
+    };
+  }
+
+  if (event.eventType === "PLAYER_JOINED") {
+    return {
+      type: "PLAYER_JOINED",
+      data: {
+        tableId: event.tableId,
+        playerName: event.playerName ?? "Player",
+        currentPlayers: event.currentPlayers ?? 0,
+        availableSeats: event.availableSeats ?? 0,
+      },
+    };
+  }
+
+  return {
+    type: "TABLE_CLOSED",
+    data: { tableId: event.tableId },
+  };
+}
 
 export function useGameWebSocket(options: UseGameWebSocketOptions = {}) {
   const { url = GAME_WS_URL, onConnected, onDisconnected, onError } = options;
@@ -132,7 +187,11 @@ export function useGameWebSocket(options: UseGameWebSocketOptions = {}) {
     // Subscribe to floor topic
     client.subscribe(`/topic/floor/${floorId}`, (message: IMessage) => {
       try {
-        const event = JSON.parse(message.body);
+        const parsed = JSON.parse(message.body);
+        const event = normalizeFloorEvent(parsed);
+        if (!event) {
+          return;
+        }
         console.log("[Game WS] Floor event:", event);
         
         // Limit event history to last 100 events to prevent memory leaks
@@ -143,14 +202,19 @@ export function useGameWebSocket(options: UseGameWebSocketOptions = {}) {
         
         // Update tables based on events
         if (event.type === "TABLE_CREATED") {
-          setTables(prev => [...prev, {
-            tableId: event.data.tableId,
-            tableName: event.data.tableName,
-            playerCount: 0,
-            createdAt: Date.now(),
-            requiredBet: event.data.requiredBet || 0,
-            maxPlayers: event.data.maxPlayers,
-          }]);
+          setTables(prev => {
+            if (prev.some(t => t.tableId === event.data.tableId)) {
+              return prev;
+            }
+            return [...prev, {
+              tableId: event.data.tableId,
+              tableName: event.data.tableName,
+              playerCount: 0,
+              createdAt: Date.now(),
+              requiredBet: event.data.requiredBet || 0,
+              maxPlayers: event.data.maxPlayers,
+            }];
+          });
         } else if (event.type === "PLAYER_JOINED") {
           setTables(prev => prev.map(t => 
             t.tableId === event.data.tableId 
@@ -176,12 +240,13 @@ export function useGameWebSocket(options: UseGameWebSocketOptions = {}) {
   const createTable = useCallback(async (
     tableName: string, 
     requiredBet: number, 
-    maxPlayers: number = 4
+    maxPlayers: number = 4,
+    floorId?: string
   ): Promise<TableDTO> => {
-    const response = await fetch(`${GAME_API_URL}/api/tables`, {
+    const response = await fetch(`${GAME_API_URL}/game/api/tables`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tableName, requiredBet, maxPlayers }),
+      body: JSON.stringify({ tableName, requiredBet, maxPlayers, floorId }),
     });
     
     if (!response.ok) {
@@ -195,7 +260,7 @@ export function useGameWebSocket(options: UseGameWebSocketOptions = {}) {
 
   // Fetch all tables (REST API)
   const fetchTables = useCallback(async (): Promise<TableDTO[]> => {
-    const response = await fetch(`${GAME_API_URL}/api/tables`);
+    const response = await fetch(`${GAME_API_URL}/game/api/tables`);
     
     if (!response.ok) {
       throw new Error("Failed to fetch tables");
@@ -218,7 +283,13 @@ export function useGameWebSocket(options: UseGameWebSocketOptions = {}) {
   }, []);
 
   // Join table (WebSocket message)
-  const joinTable = useCallback((tableId: string, playerId: string, playerName: string, balance?: number) => {
+  const joinTable = useCallback((
+    tableId: string,
+    playerId: string,
+    playerName: string,
+    balance?: number,
+    floorId?: string
+  ) => {
     const client = clientRef.current;
     if (!client?.connected) {
       console.warn("[Game WS] Cannot join - not connected");
@@ -241,18 +312,18 @@ export function useGameWebSocket(options: UseGameWebSocketOptions = {}) {
     
     client.publish({
       destination: `/app/table/${tableId}/join`,
-      body: JSON.stringify({ playerId, playerName, tableId, balance }),
+      body: JSON.stringify({ playerId, playerName, tableId, balance, floorId }),
     });
   }, []);
 
   // Leave table (WebSocket message)
-  const leaveTable = useCallback((tableId: string, playerId: string, playerName: string) => {
+  const leaveTable = useCallback((tableId: string, playerId: string, playerName: string, floorId?: string) => {
     const client = clientRef.current;
     if (!client?.connected) return;
 
     client.publish({
       destination: `/app/table/${tableId}/leave`,
-      body: JSON.stringify({ playerId, playerName, tableId }),
+      body: JSON.stringify({ playerId, playerName, tableId, floorId }),
     });
   }, []);
 

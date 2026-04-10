@@ -34,6 +34,7 @@ const FALLBACK_ROOMS: Room[] = [
 export default function BriscaFloor() {
   const router = useRouter();
   const { user, isLoading: authLoading, logout } = useUserContext();
+  const [playerId, setPlayerId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newTableName, setNewTableName] = useState("");
   const [newTableBet, setNewTableBet] = useState(100);
@@ -45,7 +46,6 @@ export default function BriscaFloor() {
     connect,
     fetchTables,
     createTable,
-    notifyTableCreated,
     subscribeToFloor,
   } = useGameWebSocket();
 
@@ -63,13 +63,37 @@ export default function BriscaFloor() {
     }
   }, [user, connect]);
 
+  // Resolve authenticated player id from gateway (JWT subject)
+  useEffect(() => {
+    if (!user) return;
+    const gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "https://azar-cafetero.duckdns.org";
+
+    fetch(`${gatewayUrl}/auth/me`, { credentials: "include" })
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error(`Failed to get player id: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (typeof data.userId === "string" && data.userId.trim()) {
+          setPlayerId(data.userId);
+        } else {
+          throw new Error("Missing userId in /auth/me response");
+        }
+      })
+      .catch((err) => {
+        console.error("[Brisca] Unable to resolve player id", err);
+      });
+  }, [user]);
+
   // Subscribe to floor updates when connected
   useEffect(() => {
-    if (isConnected && user) {
-      subscribeToFloor(BRISCA_FLOOR_ID, user.name);
+    if (isConnected && user && playerId) {
+      subscribeToFloor(BRISCA_FLOOR_ID, playerId);
       fetchTables().catch(console.error);
     }
-  }, [isConnected, user, subscribeToFloor, fetchTables]);
+  }, [isConnected, user, playerId, subscribeToFloor, fetchTables]);
 
   const enterRoom = (tableId: string) => {
     router.push(`/games/brisca/room/${tableId}`);
@@ -80,14 +104,7 @@ export default function BriscaFloor() {
     
     setCreating(true);
     try {
-      const table = await createTable(newTableName, newTableBet, 4);
-      // Notify other clients about the new table
-      notifyTableCreated(BRISCA_FLOOR_ID, {
-        tableId: table.tableId,
-        tableName: table.tableName,
-        maxPlayers: 4,
-        requiredBet: table.requiredBet,
-      });
+      const table = await createTable(newTableName, newTableBet, 4, BRISCA_FLOOR_ID);
       setShowCreateModal(false);
       setNewTableName("");
       setNewTableBet(100);
@@ -99,7 +116,7 @@ export default function BriscaFloor() {
     } finally {
       setCreating(false);
     }
-  }, [newTableName, newTableBet, creating, createTable, notifyTableCreated]);
+  }, [newTableName, newTableBet, creating, createTable]);
 
   // Loading state
   if (authLoading) {
