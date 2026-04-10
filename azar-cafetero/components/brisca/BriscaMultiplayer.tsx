@@ -14,6 +14,7 @@ import {
 type Suit = "Oros" | "Copas" | "Espadas" | "Bastos";
 type Rank = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 10 | 11 | 12;
 type Pos = "bottom" | "top" | "left" | "right";
+type RoundPhase = "waiting" | "playing" | "finished";
 
 interface Card { suit: Suit; rank: Rank; id: string; }
 interface Player { 
@@ -252,7 +253,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName }: Bris
   const [lastHandResult, setLastHandResult] = useState<HandResult | null>(null);
   const [handHistory, setHandHistory] = useState<HandResult[]>([]);
   const previousRoundRef = useRef<{
-    phase: "waiting" | "playing" | "finished";
+    phase: RoundPhase;
     currentPlayerId: string | null;
     trickCardCount: number;
     scoresById: Record<string, number>;
@@ -340,9 +341,9 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName }: Bris
       }
     }
 
-    const phase = gameState.state === "WAITING_FOR_PLAYERS" ? "waiting" 
-                : gameState.state === "IN_PROGRESS" ? "playing"
-                : "finished";
+    const phase: RoundPhase = gameState.state === "WAITING_FOR_PLAYERS" ? "waiting"
+      : gameState.state === "IN_PROGRESS" ? "playing"
+      : "finished";
 
     const winner = gameState.winner ? {
       id: gameState.winner.id,
