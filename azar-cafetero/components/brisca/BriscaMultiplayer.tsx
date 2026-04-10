@@ -5,9 +5,7 @@ import { useRouter } from "next/navigation";
 import MuteButton from "@/components/common/MuteButton";
 import {
   useBriscaWebSocket,
-  GameStateDTO,
   CardDTO,
-  PlayerDTO,
   Suit as BackendSuit,
   Rank as BackendRank,
 } from "@/hooks/useBriscaWebSocket";
@@ -29,8 +27,20 @@ interface Player {
   isMe: boolean;
 }
 
+interface InGameAlert {
+  id: string;
+  text: string;
+  tone: "info" | "success";
+}
+
+interface HandResult {
+  handNumber: number;
+  winnerId: string;
+  winnerName: string;
+  points: number;
+}
+
 // ============ CONSTANTS ============
-const CV: Record<number, number> = { 1: 11, 3: 10, 12: 4, 11: 3, 10: 2, 7: 0, 6: 0, 5: 0, 4: 0, 2: 0 };
 const SDARK: Record<Suit, string> = { Oros: "#78350f", Copas: "#7f1d1d", Espadas: "#1e3a8a", Bastos: "#14532d" };
 const SBRIGHT: Record<Suit, string> = { Oros: "#f59e0b", Copas: "#dc2626", Espadas: "#3b82f6", Bastos: "#15803d" };
 
@@ -238,6 +248,15 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName }: Bris
   const [playerName] = useState(() => userName || `Jugador${Math.floor(Math.random() * 1000)}`);
   const [gameId] = useState(() => propGameId || "test-game-1");
   const hasJoinedRef = useRef(false); // Track if we've already joined
+  const [alerts, setAlerts] = useState<InGameAlert[]>([]);
+  const [lastHandResult, setLastHandResult] = useState<HandResult | null>(null);
+  const [handHistory, setHandHistory] = useState<HandResult[]>([]);
+  const previousRoundRef = useRef<{
+    phase: "waiting" | "playing" | "finished";
+    currentPlayerId: string | null;
+    trickCardCount: number;
+    scoresById: Record<string, number>;
+  } | null>(null);
 
   const {
     isConnected,
@@ -295,7 +314,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName }: Bris
     
     const players: Player[] = gameState.players.map((p, i) => {
       // Calculate position relative to me
-      let relativeIndex = (i - myIndex + playerCount) % playerCount;
+      const relativeIndex = (i - myIndex + playerCount) % playerCount;
       const pos = PLAYER_POSITIONS[relativeIndex] || "bottom";
       
       return {
@@ -333,9 +352,18 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName }: Bris
     return { players, trumpCard, trumpSuit, remainingCards: gameState.remainingCards, currentPlayerId: gameState.currentPlayerId, currentTrick, phase, winner };
   }, [gameState, playerId]);
 
-  const myPlayer = players.find(p => p.isMe);
   const isMyTurn = currentPlayerId === playerId;
   const canStart = phase === "waiting" && players.length >= 2;
+  const trickCardCount = Object.keys(currentTrick).length;
+  const currentHandNumber = handHistory.length + (trickCardCount > 0 ? 1 : 0);
+
+  const pushAlert = useCallback((text: string, tone: "info" | "success" = "info") => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setAlerts(prev => [...prev, { id, text, tone }]);
+    window.setTimeout(() => {
+      setAlerts(prev => prev.filter(a => a.id !== id));
+    }, 4200);
+  }, []);
 
   const handlePlayCard = useCallback((card: Card) => {
     if (!isMyTurn || phase !== "playing") return;
@@ -348,6 +376,42 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName }: Bris
 
   const byPos = (pos: Pos): Player | undefined => players.find(p => p.pos === pos);
   const playedBy = (pid: string): Card | undefined => currentTrick[pid];
+
+  useEffect(() => {
+    const scoresById = Object.fromEntries(players.map(p => [p.id, p.score]));
+    const prev = previousRoundRef.current;
+
+    if (prev && phase === "playing") {
+      if (currentPlayerId === playerId && prev.currentPlayerId !== playerId) {
+        pushAlert("Es tu turno. Juega una carta.", "info");
+      }
+
+      const trickResolved = prev.trickCardCount > 0 && trickCardCount === 0;
+      if (trickResolved && currentPlayerId) {
+        const winnerPlayer = players.find(p => p.id === currentPlayerId);
+        if (winnerPlayer) {
+          const points = Math.max(0, winnerPlayer.score - (prev.scoresById[winnerPlayer.id] ?? 0));
+          const result: HandResult = {
+            handNumber: handHistory.length + 1,
+            winnerId: winnerPlayer.id,
+            winnerName: winnerPlayer.name,
+            points,
+          };
+
+          setLastHandResult(result);
+          setHandHistory(old => [result, ...old].slice(0, 5));
+          pushAlert(`Mano ${result.handNumber}: gana ${winnerPlayer.name}${points > 0 ? ` (+${points} pts)` : ""}.`, "success");
+        }
+      }
+    }
+
+    previousRoundRef.current = {
+      phase,
+      currentPlayerId,
+      trickCardCount,
+      scoresById,
+    };
+  }, [phase, currentPlayerId, playerId, players, trickCardCount, handHistory.length, pushAlert]);
 
   // Sidebar
   const Sidebar = () => (
@@ -547,6 +611,48 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName }: Bris
 
         {/* MIDDLE ROW */}
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", minHeight: 0 }}>
+          {alerts.length > 0 && (
+            <div style={{ position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 30, display: "flex", flexDirection: "column", gap: 8, width: "min(520px, calc(100vw - 180px))" }}>
+              {alerts.map(alert => (
+                <div key={alert.id} style={{
+                  background: alert.tone === "success" ? "linear-gradient(135deg, rgba(22,163,74,0.88), rgba(21,128,61,0.75))" : "linear-gradient(135deg, rgba(30,41,59,0.88), rgba(15,23,42,0.8))",
+                  border: `1px solid ${alert.tone === "success" ? "rgba(134,239,172,0.45)" : "rgba(148,163,184,0.42)"}`,
+                  borderRadius: 14,
+                  padding: "9px 14px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  boxShadow: "0 8px 22px rgba(0,0,0,0.35)",
+                  textAlign: "center",
+                }}>
+                  {alert.text}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{
+            position: "absolute",
+            top: 10,
+            right: 12,
+            zIndex: 20,
+            width: 230,
+            background: "rgba(2,6,23,0.55)",
+            border: "1px solid rgba(148,163,184,0.35)",
+            borderRadius: 14,
+            padding: "10px 12px",
+            backdropFilter: "blur(6px)",
+          }}>
+            <div style={{ fontSize: 11, color: "rgba(191,219,254,0.85)", letterSpacing: 1.5, marginBottom: 6 }}>ESTADO DE LA RONDA</div>
+            <div style={{ fontSize: 13, marginBottom: 5 }}>Mano actual: <strong>{currentHandNumber || 1}</strong></div>
+            <div style={{ fontSize: 13, marginBottom: 5 }}>Cartas en mesa: <strong>{trickCardCount}/{Math.max(players.length, 1)}</strong></div>
+            <div style={{ fontSize: 13, color: "rgba(226,232,240,0.95)" }}>
+              Última mano:{" "}
+              {lastHandResult
+                ? <strong>{lastHandResult.winnerName} {lastHandResult.points > 0 ? `(+${lastHandResult.points})` : "(+0)"}</strong>
+                : <span style={{ color: "rgba(226,232,240,0.65)" }}>Aún sin ganador</span>}
+            </div>
+          </div>
+
           {leftP && (
             <div style={{ position: "absolute", left: 80, top: "50%", transform: "translateY(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
               <Badge player={leftP} isLeader={currentPlayerId === leftP.id} />
@@ -597,16 +703,36 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName }: Bris
             <div style={{ position: "relative", width: CW * 3 + 18, height: CH * 3 + 18 }}>
               <div style={{ position: "absolute", left: CW, top: CH, width: CW + 18, height: CH + 18, borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }} />
               <div style={{ position: "absolute", left: "50%", top: 0, transform: "translateX(-50%)" }}>
-                {topP && <CardSlot card={playedBy(topP.id)} w={CW} h={CH} />}
+                {topP && (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                    <CardSlot card={playedBy(topP.id)} w={CW} h={CH} />
+                    {playedBy(topP.id) && <span style={{ fontSize: 10, color: "rgba(226,232,240,0.78)" }}>{topP.name}</span>}
+                  </div>
+                )}
               </div>
               <div style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)" }}>
-                {leftP && <CardSlot card={playedBy(leftP.id)} w={CW} h={CH} />}
+                {leftP && (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                    <CardSlot card={playedBy(leftP.id)} w={CW} h={CH} />
+                    {playedBy(leftP.id) && <span style={{ fontSize: 10, color: "rgba(226,232,240,0.78)" }}>{leftP.name}</span>}
+                  </div>
+                )}
               </div>
               <div style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)" }}>
-                {rightP && <CardSlot card={playedBy(rightP.id)} w={CW} h={CH} />}
+                {rightP && (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                    <CardSlot card={playedBy(rightP.id)} w={CW} h={CH} />
+                    {playedBy(rightP.id) && <span style={{ fontSize: 10, color: "rgba(226,232,240,0.78)" }}>{rightP.name}</span>}
+                  </div>
+                )}
               </div>
               <div style={{ position: "absolute", left: "50%", bottom: 0, transform: "translateX(-50%)" }}>
-                {botP && <CardSlot card={playedBy(botP.id)} w={CW} h={CH} />}
+                {botP && (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                    <CardSlot card={playedBy(botP.id)} w={CW} h={CH} />
+                    {playedBy(botP.id) && <span style={{ fontSize: 10, color: "rgba(226,232,240,0.78)" }}>{botP.name}</span>}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -634,8 +760,10 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName }: Bris
         {/* BOTTOM BAR */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px 6px 80px", background: "rgba(0,0,0,0.28)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
           {botP && <Badge player={botP} isLeader={currentPlayerId === botP.id} />}
-          <div style={{ color: "rgba(255,255,255,0.28)", fontSize: 10, textAlign: "right" }}>
-            As·11 · 3·10 · R·4 · C·3 · S·2
+          <div style={{ color: "rgba(255,255,255,0.38)", fontSize: 10, textAlign: "right" }}>
+            {lastHandResult
+              ? `Última mano: ${lastHandResult.winnerName} (+${lastHandResult.points})`
+              : "As·11 · 3·10 · R·4 · C·3 · S·2"}
           </div>
         </div>
       </div>
