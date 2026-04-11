@@ -305,7 +305,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   useEffect(()=>{
     if (!isConnected||hasJoinedRef.current) return;
     const initGame=async()=>{
-      try { await createGame(gameId,2,4); } catch(e) { console.log("[Brisca] Error creating game:",e); }
+      try { await createGame(gameId,2,4,100); } catch(e) { console.log("[Brisca] Error creating game:",e); }
       joinGame(gameId,playerId,playerName);
       hasJoinedRef.current=true;
       setTimeout(()=>{ requestGameState(gameId); },300);
