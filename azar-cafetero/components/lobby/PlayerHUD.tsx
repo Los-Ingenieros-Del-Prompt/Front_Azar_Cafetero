@@ -8,6 +8,7 @@ import ProfilePanel from "@/components/profile/ProfilePanel";
 
 interface PlayerHUDProps {
   onLogout?: () => void;
+  onClaimDaily?: () => void;
 }
 
 export default function PlayerHUD({ onLogout }: PlayerHUDProps) {
