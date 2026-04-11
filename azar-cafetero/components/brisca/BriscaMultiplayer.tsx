@@ -41,6 +41,13 @@ interface HandResult {
   points: number;
 }
 
+interface FlyingCardAnimation {
+  card: Card;
+  from: { x: number; y: number; w: number; h: number };
+  delta: { x: number; y: number };
+  active: boolean;
+}
+
 // ============ CONSTANTS ============
 const SDARK: Record<Suit, string> = { Oros: "#78350f", Copas: "#7f1d1d", Espadas: "#1e3a8a", Bastos: "#14532d" };
 const SBRIGHT: Record<Suit, string> = { Oros: "#f59e0b", Copas: "#dc2626", Espadas: "#3b82f6", Bastos: "#15803d" };
@@ -253,6 +260,12 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   const [alerts, setAlerts] = useState<InGameAlert[]>([]);
   const [lastHandResult, setLastHandResult] = useState<HandResult | null>(null);
   const [handHistory, setHandHistory] = useState<HandResult[]>([]);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [isAnimatingPlay, setIsAnimatingPlay] = useState(false);
+  const [flyingCard, setFlyingCard] = useState<FlyingCardAnimation | null>(null);
+  const flyTimeoutRef = useRef<number | null>(null);
+  const trickCenterRef = useRef<HTMLDivElement | null>(null);
+  const bottomTrickTargetRef = useRef<HTMLDivElement | null>(null);
   const previousRoundRef = useRef<{
     phase: RoundPhase;
     currentPlayerId: string | null;
@@ -372,6 +385,45 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
     playCard(gameId, playerId, REVERSE_SUIT_MAP[card.suit], REVERSE_RANK_MAP[card.rank]);
   }, [isMyTurn, phase, gameId, playerId, playCard]);
 
+  const handleAnimatedPlayCard = useCallback((card: Card, sourceEl: HTMLElement) => {
+    if (!isMyTurn || phase !== "playing" || isAnimatingPlay) return;
+    const targetEl = bottomTrickTargetRef.current ?? trickCenterRef.current;
+    if (!targetEl) {
+      handlePlayCard(card);
+      return;
+    }
+
+    const sourceRect = sourceEl.getBoundingClientRect();
+    const targetRect = targetEl.getBoundingClientRect();
+
+    const deltaX = (targetRect.left + targetRect.width / 2) - (sourceRect.left + sourceRect.width / 2);
+    const deltaY = (targetRect.top + targetRect.height / 2) - (sourceRect.top + sourceRect.height / 2);
+
+    setSelectedCardId(card.id);
+    setIsAnimatingPlay(true);
+    setFlyingCard({
+      card,
+      from: { x: sourceRect.left, y: sourceRect.top, w: sourceRect.width, h: sourceRect.height },
+      delta: { x: deltaX, y: deltaY },
+      active: false,
+    });
+
+    requestAnimationFrame(() => {
+      setFlyingCard(prev => (prev ? { ...prev, active: true } : prev));
+    });
+
+    if (flyTimeoutRef.current) {
+      window.clearTimeout(flyTimeoutRef.current);
+    }
+    flyTimeoutRef.current = window.setTimeout(() => {
+      handlePlayCard(card);
+      setFlyingCard(null);
+      setSelectedCardId(null);
+      setIsAnimatingPlay(false);
+      flyTimeoutRef.current = null;
+    }, 430);
+  }, [isMyTurn, phase, isAnimatingPlay, handlePlayCard]);
+
   const handleStartGame = useCallback(() => {
     startGame(gameId);
   }, [gameId, startGame]);
@@ -414,6 +466,12 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
       scoresById,
     };
   }, [phase, currentPlayerId, playerId, players, trickCardCount, handHistory.length, pushAlert]);
+
+  useEffect(() => () => {
+    if (flyTimeoutRef.current) {
+      window.clearTimeout(flyTimeoutRef.current);
+    }
+  }, []);
 
   // Sidebar
   const Sidebar = () => (
@@ -702,7 +760,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
               )}
             </div>
             {/* Cross of played cards */}
-            <div style={{ position: "relative", width: CW * 3 + 18, height: CH * 3 + 18 }}>
+            <div ref={trickCenterRef} style={{ position: "relative", width: CW * 3 + 18, height: CH * 3 + 18 }}>
               <div style={{ position: "absolute", left: CW, top: CH, width: CW + 18, height: CH + 18, borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }} />
               <div style={{ position: "absolute", left: "50%", top: 0, transform: "translateX(-50%)" }}>
                 {topP && (
@@ -728,7 +786,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
                   </div>
                 )}
               </div>
-              <div style={{ position: "absolute", left: "50%", bottom: 0, transform: "translateX(-50%)" }}>
+              <div ref={bottomTrickTargetRef} style={{ position: "absolute", left: "50%", bottom: 0, transform: "translateX(-50%)" }}>
                 {botP && (
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
                     <CardSlot card={playedBy(botP.id)} w={CW} h={CH} />
@@ -750,10 +808,19 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
         {/* HUMAN HAND */}
         <div style={{ display: "flex", justifyContent: "center", gap: 10, padding: "4px 0 8px", alignItems: "flex-end" }}>
           {botP?.hand.map(card => (
-            <button key={card.id} onClick={() => handlePlayCard(card)} disabled={!isMyTurn}
-              style={{ background: "none", border: "none", padding: 0, cursor: isMyTurn ? "pointer" : "default", transition: "transform 0.2s, filter 0.2s", filter: isMyTurn ? "none" : "brightness(0.8) saturate(0.8)" }}
-              onMouseEnter={e => { if (isMyTurn) (e.currentTarget as HTMLElement).style.transform = "translateY(-14px)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}>
+            <button
+              key={card.id}
+              onClick={(e) => handleAnimatedPlayCard(card, e.currentTarget)}
+              disabled={!isMyTurn || isAnimatingPlay}
+              className={`hand-card-btn${selectedCardId === card.id ? " hand-card-btn--selected" : ""}`}
+              style={{
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: isMyTurn && !isAnimatingPlay ? "pointer" : "default",
+                filter: isMyTurn && !isAnimatingPlay ? "none" : "brightness(0.8) saturate(0.8)",
+                opacity: selectedCardId === card.id ? 0 : 1,
+              }}>
               <CardFace card={card} w={78} h={117} highlight={isMyTurn} />
             </button>
           ))}
@@ -777,6 +844,43 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "rotate(0deg)"; }}>
         <RotateCcw size={16} />
       </button>
+
+      {flyingCard && (
+        <div
+          style={{
+            position: "fixed",
+            left: flyingCard.from.x,
+            top: flyingCard.from.y,
+            width: flyingCard.from.w,
+            height: flyingCard.from.h,
+            pointerEvents: "none",
+            zIndex: 90,
+            transform: `translate(${flyingCard.active ? flyingCard.delta.x : 0}px, ${flyingCard.active ? flyingCard.delta.y : 0}px) scale(${flyingCard.active ? 0.9 : 1}) rotate(${flyingCard.active ? -4 : 0}deg)`,
+            transformOrigin: "center",
+            transition: "transform 430ms cubic-bezier(0.22, 1, 0.36, 1), opacity 430ms ease",
+            opacity: flyingCard.active ? 0.98 : 1,
+            filter: "drop-shadow(0 12px 22px rgba(0,0,0,0.55))",
+          }}>
+          <CardFace card={flyingCard.card} w={flyingCard.from.w} h={flyingCard.from.h} highlight />
+        </div>
+      )}
+
+      <style jsx>{`
+        .hand-card-btn {
+          transform: translateY(0) scale(1);
+          transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), filter 220ms ease, opacity 140ms ease;
+          will-change: transform;
+        }
+
+        .hand-card-btn:not(:disabled):hover {
+          transform: translateY(-14px) scale(1.035);
+        }
+
+        .hand-card-btn:not(:disabled):active,
+        .hand-card-btn--selected {
+          transform: translateY(-20px) scale(1.05);
+        }
+      `}</style>
     </div>
   );
 }
