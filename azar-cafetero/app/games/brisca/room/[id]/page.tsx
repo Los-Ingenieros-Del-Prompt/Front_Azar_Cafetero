@@ -14,7 +14,6 @@ export default function BriscaRoomPage({ params }: PageProps) {
   const router = useRouter();
   const { user, isLoading } = useUserContext();
 
-  // Auth check
   useEffect(() => {
     if (!isLoading && !user) {
       router.replace("/");
@@ -29,9 +28,7 @@ export default function BriscaRoomPage({ params }: PageProps) {
     );
   }
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
-  return <BriscaMultiplayer gameId={id} userName={user.name} userId={user.id} />;
+  return <BriscaMultiplayer gameId={id} userName={user.name} userId={user.userId} />;
 }
