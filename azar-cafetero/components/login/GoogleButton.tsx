@@ -43,7 +43,7 @@ export default function GoogleButton({ onError, onLoadingChange }: GoogleButtonP
         data.email;
 
       // Guarda nombre y avatar en contexto (el JWT vive en cookie HttpOnly)
-      login({ id: resolvedUserId, name: data.name, avatarUrl: data.avatarUrl });
+login({ name: data.name, avatarUrl: data.avatarUrl, userId: data.userId });
 
       router.replace("/lobby");
     } catch (err: unknown) {
