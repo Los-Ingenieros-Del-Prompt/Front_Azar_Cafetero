@@ -271,7 +271,7 @@ interface BriscaMultiplayerProps { gameId?: string; userName?: string; userId?: 
 export default function BriscaMultiplayer({ gameId: propGameId, userName, userId }: BriscaMultiplayerProps) {
   const router = useRouter();
   const { user } = useUserContext();
-  const [playerId] = useState(() => user?.userId || `player-${Math.random().toString(36).slice(2, 8)}`);
+  const [playerId] = useState(() => userId || user?.userId || `player-${Math.random().toString(36).slice(2, 8)}`);
   const [playerName] = useState(() => userName || user?.name || `Jugador${Math.floor(Math.random() * 1000)}`);
   const [gameId] = useState(()=>propGameId||"test-game-1");
   const hasJoinedRef = useRef(false);
