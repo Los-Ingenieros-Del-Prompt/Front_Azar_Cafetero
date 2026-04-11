@@ -784,7 +784,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   const leftP = byPos("left");
   const rightP = byPos("right");
   const botP = byPos("bottom");
-  const CW = 52, CH = 78;
+  const CW = 64, CH = 96, TABLE_GAP = 26;
 
   const msg = isMyTurn ? "¡Tu turno! Elige una carta" : `Turno de ${players.find(p => p.id === currentPlayerId)?.name || "..."}`;
 
@@ -905,8 +905,8 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
               )}
             </div>
             {/* Cross of played cards */}
-            <div ref={trickCenterRef} style={{ position: "relative", width: CW * 3 + 18, height: CH * 3 + 18 }}>
-              <div style={{ position: "absolute", left: CW, top: CH, width: CW + 18, height: CH + 18, borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }} />
+            <div ref={trickCenterRef} style={{ position: "relative", width: CW * 3 + TABLE_GAP, height: CH * 3 + TABLE_GAP }}>
+              <div style={{ position: "absolute", left: CW, top: CH, width: CW + TABLE_GAP, height: CH + TABLE_GAP, borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }} />
               <div style={{ position: "absolute", left: "50%", top: 0, transform: "translateX(-50%)" }}>
                 {topP && (
                   <div ref={(el) => { trickSlotRefs.current.top = el; }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
