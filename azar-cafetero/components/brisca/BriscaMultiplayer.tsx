@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import { RotateCcw, Home, LogOut, User, DollarSign, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import MuteButton from "@/components/common/MuteButton";
+import { useUserContext } from "@/context/UserContext";
 import {
   useBriscaWebSocket,
   CardDTO,
@@ -269,8 +270,9 @@ interface BriscaMultiplayerProps { gameId?: string; userName?: string; userId?: 
 
 export default function BriscaMultiplayer({ gameId: propGameId, userName, userId }: BriscaMultiplayerProps) {
   const router = useRouter();
-  const [playerId] = useState(()=>userId||`player-${Math.random().toString(36).slice(2,8)}`);
-  const [playerName] = useState(()=>userName||`Jugador${Math.floor(Math.random()*1000)}`);
+  const { user } = useUserContext();
+  const [playerId] = useState(() => user?.userId || `player-${Math.random().toString(36).slice(2, 8)}`);
+  const [playerName] = useState(() => userName || user?.name || `Jugador${Math.floor(Math.random() * 1000)}`);
   const [gameId] = useState(()=>propGameId||"test-game-1");
   const hasJoinedRef = useRef(false);
   const [alerts, setAlerts] = useState<InGameAlert[]>([]);
