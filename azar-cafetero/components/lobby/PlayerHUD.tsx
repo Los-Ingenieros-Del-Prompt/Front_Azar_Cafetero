@@ -1,21 +1,37 @@
 "use client";
 
+import { useState } from "react";
 import { usePlayerHUD } from "@/hooks/usePlayerHUD";
+import { useBalance }   from "@/hooks/useBalance";
+import { useUserContext } from "@/context/UserContext";
+import ProfilePanel from "@/components/profile/ProfilePanel";
 
 interface PlayerHUDProps {
-  /** Callback cuando el jugador reclama fichas diarias */
-  onClaimDaily?: () => void;
-  /** Callback para cerrar sesión */
   onLogout?: () => void;
 }
 
-export default function PlayerHUD({ onClaimDaily, onLogout }: PlayerHUDProps) {
-  const { identity, loading, isZeroBalance } = usePlayerHUD();
+export default function PlayerHUD({ onLogout }: PlayerHUDProps) {
+  const { identity, loading: identityLoading } = usePlayerHUD();
+  const { logout } = useUserContext();
+
+  const {
+    amount,
+    canReceiveBonus,
+    nextBonusCountdown,
+    diff,
+    loading: balanceLoading,
+    claimBonus,
+    claimingBonus,
+  } = useBalance();
+
+  const [panelOpen, setPanelOpen] = useState(false);
+
+  const loading = identityLoading || balanceLoading;
+  const handleLogout = onLogout ?? logout;
 
   return (
     <>
       <style>{`
-        /* ── HUD wrapper ── */
         .hud {
           position: fixed;
           top: 1.25rem;
@@ -28,7 +44,6 @@ export default function PlayerHUD({ onClaimDaily, onLogout }: PlayerHUDProps) {
           font-family: 'DM Sans', sans-serif;
         }
 
-        /* ── Pill principal ── */
         .hud-pill {
           display: flex;
           align-items: center;
@@ -48,14 +63,29 @@ export default function PlayerHUD({ onClaimDaily, onLogout }: PlayerHUDProps) {
           to   { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        /* Avatar */
+        .hud-avatar-btn {
+          background: none;
+          border: none;
+          padding: 0;
+          cursor: pointer;
+          border-radius: 50%;
+          flex-shrink: 0;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .hud-avatar-btn:hover {
+          transform: scale(1.08);
+          box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
+          border-radius: 50%;
+        }
+        .hud-avatar-btn:active { transform: scale(0.96); }
+
         .hud-avatar {
           width: 36px;
           height: 36px;
           border-radius: 50%;
           object-fit: cover;
           border: 2px solid rgba(255,255,255,0.2);
-          flex-shrink: 0;
+          display: block;
           background: rgba(255,255,255,0.1);
         }
 
@@ -69,10 +99,8 @@ export default function PlayerHUD({ onClaimDaily, onLogout }: PlayerHUDProps) {
           align-items: center;
           justify-content: center;
           font-size: 1rem;
-          flex-shrink: 0;
         }
 
-        /* Info */
         .hud-info {
           display: flex;
           flex-direction: column;
@@ -96,18 +124,31 @@ export default function PlayerHUD({ onClaimDaily, onLogout }: PlayerHUDProps) {
           align-items: center;
           gap: 0.3rem;
           line-height: 1.2;
+          position: relative;
         }
 
-        .hud-balance-amount {
-          color: #4ade80;
-          font-weight: 500;
+        .hud-balance-amount { color: #4ade80; font-weight: 500; }
+        .hud-balance-amount.is-zero { color: #f87171; }
+
+        .hud-diff {
+          position: absolute;
+          left: 0;
+          top: -1.4rem;
+          font-size: 0.75rem;
+          font-weight: 700;
+          pointer-events: none;
+          animation: diffFloat 2.5s ease-out forwards;
+          white-space: nowrap;
+        }
+        .hud-diff.positive { color: #4ade80; }
+        .hud-diff.negative { color: #f87171; }
+
+        @keyframes diffFloat {
+          0%   { opacity: 1; transform: translateY(0) scale(1); }
+          60%  { opacity: 1; transform: translateY(-14px) scale(1.1); }
+          100% { opacity: 0; transform: translateY(-22px) scale(0.9); }
         }
 
-        .hud-balance-amount.is-zero {
-          color: #f87171;
-        }
-
-        /* ── Skeleton ── */
         .hud-skeleton {
           display: flex;
           align-items: center;
@@ -134,158 +175,121 @@ export default function PlayerHUD({ onClaimDaily, onLogout }: PlayerHUDProps) {
           100% { background-position: -200% 0; }
         }
 
-        /* ── Zero-balance banner ── */
-        .hud-alert {
+        .hud-bonus-btn {
           display: flex;
           align-items: center;
-          gap: 0.6rem;
-          background: rgba(0, 0, 0, 0.55);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(251, 191, 36, 0.35);
-          border-radius: 12px;
-          padding: 0.6rem 0.85rem;
-          animation: alertIn 0.4s ease 0.1s both;
-          max-width: 260px;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-        }
-
-        @keyframes alertIn {
-          from { opacity: 0; transform: translateY(-6px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-
-        .hud-alert-icon {
-          font-size: 1.1rem;
-          flex-shrink: 0;
-        }
-
-        .hud-alert-text {
-          font-size: 0.75rem;
-          color: rgba(255,255,255,0.75);
-          font-weight: 300;
-          line-height: 1.4;
-          flex: 1;
-        }
-
-        .hud-alert-cta {
-          font-size: 0.72rem;
-          font-weight: 500;
-          color: #fbbf24;
-          background: none;
-          border: 1px solid rgba(251,191,36,0.4);
+          gap: 0.4rem;
+          background: linear-gradient(135deg, #f59e0b, #f97316);
+          border: none;
           border-radius: 100px;
-          padding: 0.3rem 0.75rem;
+          padding: 0.35rem 0.9rem;
+          font-size: 0.72rem;
+          font-weight: 600;
+          color: #fff;
           cursor: pointer;
-          white-space: nowrap;
-          transition: background 0.2s, color 0.2s;
-          flex-shrink: 0;
+          box-shadow: 0 2px 12px rgba(249, 115, 22, 0.4);
+          transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+          animation: bonusPulse 2s ease-in-out infinite;
+        }
+        .hud-bonus-btn:hover:not(:disabled) {
+          transform: scale(1.04);
+          box-shadow: 0 4px 18px rgba(249, 115, 22, 0.55);
+        }
+        .hud-bonus-btn:disabled { opacity: 0.6; cursor: not-allowed; animation: none; }
+
+        @keyframes bonusPulse {
+          0%, 100% { box-shadow: 0 2px 12px rgba(249, 115, 22, 0.4); }
+          50%       { box-shadow: 0 2px 20px rgba(249, 115, 22, 0.7); }
         }
 
-        .hud-alert-cta:hover {
-          background: #fbbf24;
-          color: #111;
+        .hud-bonus-countdown {
+          font-size: 0.68rem;
+          color: rgba(255,255,255,0.4);
+          text-align: right;
+          padding-right: 0.25rem;
         }
 
-        /* Responsive: en móvil baja un poco */
         @media (max-width: 480px) {
           .hud { top: 1rem; right: 1rem; }
-          .hud-alert { max-width: 200px; }
-          .hud-alert-text { display: none; }
         }
-
-        /* ── Logout button ── */
-        .hud-logout {
-          background: none;
-          border: none;
-          color: rgba(255,255,255,0.35);
-          cursor: pointer;
-          font-size: 0.7rem;
-          padding: 0 0.25rem;
-          line-height: 1;
-          transition: color 0.2s;
-          flex-shrink: 0;
-        }
-
-        .hud-logout:hover { color: rgba(255,255,255,0.75); }
       `}</style>
+
+      <ProfilePanel
+        open={panelOpen}
+        onClose={() => setPanelOpen(false)}
+        onLogout={() => { setPanelOpen(false); handleLogout(); }}
+        balance={amount}
+      />
 
       <div className="hud" role="complementary" aria-label="HUD del jugador">
 
-        {/* Pill: skeleton o datos reales — el botón de logout está siempre presente */}
         {loading || !identity ? (
-          <div className="hud-skeleton" aria-busy="true" aria-label="Cargando perfil">
+          <div className="hud-skeleton" aria-busy="true">
             <div className="sk" style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0 }} />
             <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
               <div className="sk" style={{ width: 80, height: 10 }} />
               <div className="sk" style={{ width: 55, height: 9 }} />
             </div>
-            {onLogout && (
-              <button
-                className="hud-logout"
-                onClick={onLogout}
-                title="Cerrar sesión"
-                aria-label="Cerrar sesión"
-              >
-                ✕
-              </button>
-            )}
           </div>
         ) : (
           <div className="hud-pill">
-            {/* Avatar: imagen si es URL, emoji/inicial si no */}
-            {identity.avatar?.startsWith("http") ? (
-              <img
-                src={identity.avatar}
-                alt={identity.name}
-                className="hud-avatar"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
-                }}
-              />
-            ) : (
-              <div className="hud-avatar-fallback" aria-hidden="true">
-                {identity.avatar || identity.name.charAt(0).toUpperCase()}
-              </div>
-            )}
+            <button
+              className="hud-avatar-btn"
+              onClick={() => setPanelOpen(true)}
+              aria-label="Abrir perfil"
+              title="Ver perfil"
+            >
+              {identity.avatar?.startsWith("http") ? (
+                <img
+                  src={identity.avatar}
+                  alt={identity.name}
+                  className="hud-avatar"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                />
+              ) : (
+                <div className="hud-avatar-fallback" aria-hidden="true">
+                  {identity.avatar || identity.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </button>
 
             <div className="hud-info">
               <span className="hud-name">{identity.name}</span>
               <span className="hud-balance">
+                {diff && (
+                  <span className={`hud-diff ${diff.startsWith("+") ? "positive" : "negative"}`}>
+                    {diff}
+                  </span>
+                )}
                 🪙&nbsp;
-                <span className={`hud-balance-amount${isZeroBalance ? " is-zero" : ""}`}>
-                  {identity.balance.toLocaleString("es-CO")}
+                <span className={`hud-balance-amount${amount === 0 ? " is-zero" : ""}`}>
+                  {amount !== null
+                    ? amount.toLocaleString("es-CO")
+                    : identity.balance.toLocaleString("es-CO")}
                 </span>
                 &nbsp;fichas
               </span>
             </div>
-
-            {onLogout && (
-              <button
-                className="hud-logout"
-                onClick={onLogout}
-                title="Cerrar sesión"
-                aria-label="Cerrar sesión"
-              >
-                ✕
-              </button>
-            )}
           </div>
         )}
 
-        {/* Aviso de saldo cero */}
-        {isZeroBalance && !loading && (
-          <div className="hud-alert" role="alert">
-            <span className="hud-alert-icon">⚠️</span>
-            <p className="hud-alert-text">Sin fichas disponibles</p>
-            <button
-              className="hud-alert-cta"
-              onClick={onClaimDaily}
-              aria-label="Reclamar fichas diarias"
-            >
-              Reclamar
-            </button>
-          </div>
+        {!loading && identity && canReceiveBonus && (
+          <button
+            className="hud-bonus-btn"
+            onClick={claimBonus}
+            disabled={claimingBonus}
+            aria-label="Reclamar bono diario"
+          >
+            {claimingBonus ? "..." : "🎁 +100 fichas"}
+          </button>
         )}
+
+        {!loading && identity && !canReceiveBonus && nextBonusCountdown && (
+          <p className="hud-bonus-countdown">
+            Próximo bono en {nextBonusCountdown}
+          </p>
+        )}
+
       </div>
     </>
   );

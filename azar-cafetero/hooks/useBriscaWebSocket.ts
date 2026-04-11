@@ -152,7 +152,7 @@ export function useBriscaWebSocket(options: UseBriscaWebSocketOptions = {}) {
   }, []);
 
   // Create a new game
-  const createGame = useCallback((gameId: string, minPlayers = 2, maxPlayers = 4): Promise<void> => {
+  const createGame = useCallback((gameId: string, minPlayers = 2, maxPlayers = 4, betAmount = 100): Promise<void> => {
     return new Promise((resolve, reject) => {
       const client = clientRef.current;
       if (!client?.connected) {
@@ -160,16 +160,14 @@ export function useBriscaWebSocket(options: UseBriscaWebSocketOptions = {}) {
         return;
       }
 
-      // Subscribe to the game topic first
       subscribeToGame(gameId);
 
       console.log("[Brisca WS] Creating game:", gameId);
       client.publish({
         destination: "/app/game/create",
-        body: JSON.stringify({ gameId, minPlayers, maxPlayers }),
+        body: JSON.stringify({ gameId, minPlayers, maxPlayers, betAmount }),
       });
 
-      // Give some time for the message to arrive
       setTimeout(resolve, 500);
     });
   }, [subscribeToGame]);
