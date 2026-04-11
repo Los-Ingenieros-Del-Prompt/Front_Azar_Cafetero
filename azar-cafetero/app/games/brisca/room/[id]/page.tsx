@@ -33,5 +33,5 @@ export default function BriscaRoomPage({ params }: PageProps) {
     return null;
   }
 
-  return <BriscaMultiplayer gameId={id} userName={user.name} />;
+  return <BriscaMultiplayer gameId={id} userName={user.name} userId={user.id} />;
 }
