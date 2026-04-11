@@ -170,7 +170,7 @@ export function useBriscaWebSocket(options: UseBriscaWebSocketOptions = {}) {
 
       setTimeout(resolve, 500);
     });
-  }, [subscribeToGame]);
+}, [subscribeToGame]);
 
   // Join an existing game
   const joinGame = useCallback((gameId: string, playerId: string, playerName: string) => {
