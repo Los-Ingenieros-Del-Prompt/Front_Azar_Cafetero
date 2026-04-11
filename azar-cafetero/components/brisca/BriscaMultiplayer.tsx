@@ -241,11 +241,12 @@ const Badge: React.FC<BadgeProps> = ({ player, isLeader }) => (
 interface BriscaMultiplayerProps { 
   gameId?: string; 
   userName?: string;
+  userId?: string;
 }
 
-export default function BriscaMultiplayer({ gameId: propGameId, userName }: BriscaMultiplayerProps) {
+export default function BriscaMultiplayer({ gameId: propGameId, userName, userId }: BriscaMultiplayerProps) {
   const router = useRouter();
-  const [playerId] = useState(() => `player-${Math.random().toString(36).slice(2, 8)}`);
+  const [playerId] = useState(() => userId || `player-${Math.random().toString(36).slice(2, 8)}`);
   const [playerName] = useState(() => userName || `Jugador${Math.floor(Math.random() * 1000)}`);
   const [gameId] = useState(() => propGameId || "test-game-1");
   const hasJoinedRef = useRef(false); // Track if we've already joined

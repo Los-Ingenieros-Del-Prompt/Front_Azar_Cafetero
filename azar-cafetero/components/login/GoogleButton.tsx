@@ -35,9 +35,15 @@ export default function GoogleButton({ onError, onLoadingChange }: GoogleButtonP
       if (!res.ok) throw new Error(`Error de autenticación: ${res.status}`);
 
       const data = await res.json();
+      const resolvedUserId =
+        data.userId ??
+        data.id ??
+        data.sub ??
+        data.googleId ??
+        data.email;
 
       // Guarda nombre y avatar en contexto (el JWT vive en cookie HttpOnly)
-      login({ name: data.name, avatarUrl: data.avatarUrl });
+      login({ id: resolvedUserId, name: data.name, avatarUrl: data.avatarUrl });
 
       router.replace("/lobby");
     } catch (err: unknown) {

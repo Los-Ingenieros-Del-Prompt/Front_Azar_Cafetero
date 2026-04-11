@@ -11,6 +11,7 @@ import {
 const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
 
 export interface StoredUser {
+  id?: string;
   name: string;
   avatarUrl: string;
 }
