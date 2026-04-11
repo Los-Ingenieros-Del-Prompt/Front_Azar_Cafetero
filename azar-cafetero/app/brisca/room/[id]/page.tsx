@@ -1,40 +1,26 @@
 "use client";
 
-import { useMemo } from "react";
-import { useParams } from "next/navigation";
-import TableWaitingRoom from "@/components/lobby/TableWaitingRoom";
-import { useUserContext } from "@/context/UserContext";
+import { useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 
 export default function BriscaRoomPage() {
+  const router = useRouter();
   const params = useParams<{ id: string }>();
-  const { user } = useUserContext();
   const tableId = params.id;
 
-  const players = useMemo(
-    () => [
-      {
-        id: "host",
-        name: user?.name ?? "Jugador Paisa",
-        avatar: "🧉",
-        isHost: true,
-      },
-      { id: "guest-1", name: "La Mona", avatar: "🧢" },
-      { id: "guest-2", name: "Don Ñero", avatar: "🎩" },
-    ],
-    [user?.name]
-  );
+  useEffect(() => {
+    if (tableId) {
+      router.replace(`/games/brisca/room/${tableId}`);
+    }
+  }, [tableId, router]);
 
   return (
-    <TableWaitingRoom
-      gameLabel="Brisca"
-      tableId={tableId}
-      tableName={`Mesa Brisca #${tableId}`}
-      minPlayers={2}
-      maxPlayers={4}
-      players={players}
-      accentClass="border-yellow-300/45 bg-yellow-500/15 text-yellow-100"
-      bgImage="/images/backgroundbrisca.jpg"
-      roomRoutePrefix="brisca"
-    />
+    <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+      <div className="text-center">
+        <Loader2 className="w-8 h-8 animate-spin text-yellow-500 mx-auto mb-3" />
+        <p className="text-sm text-white/70">Entrando a la mesa...</p>
+      </div>
+    </div>
   );
 }
