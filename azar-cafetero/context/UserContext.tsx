@@ -11,9 +11,9 @@ import {
 const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
 
 export interface StoredUser {
-  id?: string;
   name: string;
   avatarUrl: string;
+  userId: string; // ← NUEVO: email que usa el wallet como ID
 }
 
 interface UserContextValue {
@@ -29,15 +29,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<StoredUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Al montar, intenta recuperar los datos del usuario desde sessionStorage
-  // (solo nombre y avatar — el JWT vive en la cookie HttpOnly)
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem("user");
       if (saved) setUser(JSON.parse(saved));
-    } catch {
-      // sessionStorage no disponible (SSR)
-    }
+    } catch {}
     setIsLoading(false);
   }, []);
 
@@ -47,15 +43,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    // Borra la cookie HttpOnly en el gateway
     try {
       await fetch(`${GATEWAY}/auth/logout`, {
         method: "POST",
         credentials: "include",
       });
-    } catch {
-      // continuar aunque falle
-    }
+    } catch {}
     sessionStorage.removeItem("user");
     setUser(null);
     window.location.replace("/");
