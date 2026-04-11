@@ -17,10 +17,10 @@ type Pos = "bottom" | "top" | "left" | "right";
 type RoundPhase = "waiting" | "playing" | "finished";
 
 interface Card { suit: Suit; rank: Rank; id: string; }
-interface Player { 
-  id: string; 
-  name: string; 
-  hand: Card[]; 
+interface Player {
+  id: string;
+  name: string;
+  hand: Card[];
   score: number;
   pos: Pos;
   emoji: string;
@@ -78,7 +78,7 @@ const PIP_LAYOUTS: Record<number, [number, number, boolean][]> = {
 };
 
 const PLAYER_POSITIONS: Pos[] = ["bottom", "top", "right", "left"];
-const PLAYER_COLORS = ["#60a5fa", "#f87171", "#34d399", "#c084fc"];
+const PLAYER_COLORS = ["#22d3ee", "#f87171", "#a78bfa", "#34d399"];
 const PLAYER_EMOJIS = ["🃏", "⚡", "🦉", "🔥"];
 
 // ============ SUIT/RANK CONVERSION ============
@@ -188,17 +188,31 @@ const FigureSVG: React.FC<FigureSVGProps> = ({ suit, rank }) => {
   );
 };
 
+// Dark fantasy card back
 const CardBack: React.FC<{ w?: number; h?: number }> = ({ w = 80, h = 120 }) => (
-  <svg viewBox="0 0 80 120" style={{ width: w, height: h, display: "block", borderRadius: 9, flexShrink: 0 }}>
+  <svg viewBox="0 0 80 120" style={{ width: w, height: h, display: "block", borderRadius: 6, flexShrink: 0 }}>
     <defs>
-      <pattern id="cbk" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
-        <rect width="10" height="10" fill="#1e3a8a" />
-        <path d="M0,0L5,5L10,0M0,10L5,5L10,10" stroke="#2563eb" strokeWidth="0.8" fill="none" />
+      <radialGradient id="cbkgrad" cx="50%" cy="50%" r="70%">
+        <stop offset="0%" stopColor="#1a1035" />
+        <stop offset="100%" stopColor="#0a0820" />
+      </radialGradient>
+      <pattern id="cbkpat" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+        <rect width="8" height="8" fill="none" />
+        <path d="M0,4 L4,0 L8,4 L4,8Z" fill="none" stroke="rgba(100,80,200,0.25)" strokeWidth="0.5" />
       </pattern>
     </defs>
-    <rect width="80" height="120" fill="url(#cbk)" rx="9" />
-    <rect x="4" y="4" width="72" height="112" rx="6" fill="none" stroke="#60a5fa" strokeWidth="0.7" opacity="0.3" />
-    <text x="40" y="64" textAnchor="middle" fontSize="8" fill="#93c5fd" opacity="0.55" fontFamily="Georgia,serif" letterSpacing="2">BRISCA</text>
+    <rect width="80" height="120" fill="url(#cbkgrad)" rx="6" />
+    <rect width="80" height="120" fill="url(#cbkpat)" rx="6" />
+    {/* Cyan glow border like the reference */}
+    <rect x="2" y="2" width="76" height="116" rx="5" fill="none" stroke="#22d3ee" strokeWidth="1.2" opacity="0.6" />
+    <rect x="5" y="5" width="70" height="110" rx="4" fill="none" stroke="#22d3ee" strokeWidth="0.4" opacity="0.3" />
+    {/* Inner decorative diamond */}
+    <path d="M40,20 L55,40 L40,60 L25,40Z" fill="none" stroke="rgba(139,92,246,0.4)" strokeWidth="0.8" />
+    <path d="M40,30 L50,40 L40,50 L30,40Z" fill="rgba(139,92,246,0.12)" stroke="rgba(139,92,246,0.3)" strokeWidth="0.5" />
+    {/* Skull-like ornament at top and bottom */}
+    <circle cx="40" cy="40" r="7" fill="rgba(139,92,246,0.18)" stroke="rgba(139,92,246,0.4)" strokeWidth="0.6" />
+    <text x="40" y="44" textAnchor="middle" fontSize="7" fill="rgba(180,160,255,0.7)" fontFamily="Georgia,serif">✦</text>
+    <text x="40" y="100" textAnchor="middle" fontSize="6" fill="rgba(34,211,238,0.45)" fontFamily="Georgia,serif" letterSpacing="1.5">BRISCA</text>
   </svg>
 );
 
@@ -209,11 +223,14 @@ const CardFace: React.FC<CardFaceProps> = ({ card, w = 80, h = 120, highlight = 
   const lbl = rank === 10 ? "S" : rank === 11 ? "C" : rank === 12 ? "R" : String(rank);
   const ps = rank === 1 ? 1.6 : rank >= 6 ? 0.82 : 0.9;
   const dc = SDARK[suit];
+  const glowColor = highlight ? "#22d3ee" : "rgba(100,80,200,0.7)";
   return (
     <div style={{
-      width: w, height: h, borderRadius: 9, overflow: "hidden", flexShrink: 0,
-      border: `2px solid ${highlight ? "#facc15" : "#d1d5db"}`,
-      boxShadow: highlight ? "0 0 0 3px rgba(250,204,21,0.35), 0 6px 16px rgba(0,0,0,0.5)" : "0 4px 14px rgba(0,0,0,0.45)",
+      width: w, height: h, borderRadius: 6, overflow: "hidden", flexShrink: 0,
+      border: `2px solid ${highlight ? "#22d3ee" : "rgba(100,80,200,0.55)"}`,
+      boxShadow: highlight
+        ? `0 0 0 1px rgba(34,211,238,0.4), 0 0 18px rgba(34,211,238,0.5), 0 6px 16px rgba(0,0,0,0.7)`
+        : `0 0 0 1px rgba(100,80,200,0.3), 0 4px 14px rgba(0,0,0,0.6)`,
       background: "white",
     }}>
       <svg viewBox="0 0 60 90" style={{ width: "100%", height: "100%" }}>
@@ -240,28 +257,65 @@ interface CardSlotProps { card?: Card; w?: number; h?: number; }
 const CardSlot: React.FC<CardSlotProps> = ({ card, w = 52, h = 78 }) => (
   card
     ? <CardFace card={card} w={w} h={h} />
-    : <div style={{ width: w, height: h, borderRadius: 7, border: "2px dashed rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.08)" }} />
+    : <div style={{
+        width: w, height: h, borderRadius: 6,
+        border: "1.5px dashed rgba(34,211,238,0.18)",
+        background: "rgba(0,0,0,0.2)",
+        boxShadow: "inset 0 0 12px rgba(0,0,0,0.4)"
+      }} />
 );
 
+// Dark fantasy badge matching reference image style
 interface BadgeProps { player: Player; isLeader: boolean; }
 const Badge: React.FC<BadgeProps> = ({ player, isLeader }) => (
   <div style={{
-    display: "flex", alignItems: "center", gap: 5, padding: "3px 10px",
-    borderRadius: 20, background: `${player.clr}22`, border: `1.5px solid ${player.clr}55`,
-    boxShadow: isLeader ? `0 0 10px ${player.clr}55` : "none", transition: "box-shadow 0.4s",
+    display: "flex", alignItems: "center", gap: 6, padding: "4px 10px 4px 6px",
+    borderRadius: 8,
+    background: isLeader
+      ? `linear-gradient(135deg, rgba(34,211,238,0.18), rgba(139,92,246,0.12))`
+      : `rgba(0,0,0,0.55)`,
+    border: `1.5px solid ${isLeader ? "rgba(34,211,238,0.7)" : "rgba(100,80,200,0.35)"}`,
+    boxShadow: isLeader
+      ? `0 0 14px rgba(34,211,238,0.35), inset 0 1px 0 rgba(255,255,255,0.05)`
+      : `0 2px 8px rgba(0,0,0,0.5)`,
+    transition: "all 0.35s ease",
+    backdropFilter: "blur(8px)",
   }}>
-    <span style={{ fontSize: 13 }}>{player.emoji}</span>
-    <span style={{ fontSize: 12, fontWeight: "bold", color: player.clr, fontFamily: "Georgia,serif" }}>
+    <span style={{ fontSize: 14 }}>{player.emoji}</span>
+    <span style={{
+      fontSize: 12, fontWeight: "bold", color: isLeader ? "#22d3ee" : player.clr,
+      fontFamily: "Georgia,serif", letterSpacing: 0.5,
+      textShadow: isLeader ? "0 0 8px rgba(34,211,238,0.6)" : "none",
+    }}>
       {player.name}{player.isMe && " (Tú)"}
     </span>
-    <span style={{ background: "rgba(255,255,255,0.9)", color: "#111", fontSize: 11, fontWeight: 900, padding: "1px 7px", borderRadius: 10, minWidth: 22, textAlign: "center" }}>{player.score}</span>
-    {isLeader && <span style={{ fontSize: 10, color: "#fde68a", marginLeft: 1 }}>★</span>}
+    {/* Score badge like reference — colored circle with number */}
+    <div style={{
+      width: 26, height: 26, borderRadius: "50%",
+      background: isLeader
+        ? "linear-gradient(135deg, #22d3ee, #0891b2)"
+        : `linear-gradient(135deg, ${player.clr}cc, ${player.clr}88)`,
+      border: `1.5px solid ${isLeader ? "#22d3ee" : player.clr}`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      color: "#000", fontSize: 11, fontWeight: 900,
+      boxShadow: `0 0 8px ${isLeader ? "rgba(34,211,238,0.5)" : "rgba(0,0,0,0.4)"}`,
+    }}>
+      {player.score}
+    </div>
+    {isLeader && (
+      <div style={{
+        width: 6, height: 6, borderRadius: "50%",
+        background: "#22d3ee",
+        boxShadow: "0 0 6px #22d3ee",
+        animation: "pulse 1.2s ease-in-out infinite",
+      }} />
+    )}
   </div>
 );
 
 // ============ MAIN COMPONENT ============
-interface BriscaMultiplayerProps { 
-  gameId?: string; 
+interface BriscaMultiplayerProps {
+  gameId?: string;
   userName?: string;
   userId?: string;
 }
@@ -271,7 +325,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   const [playerId] = useState(() => userId || `player-${Math.random().toString(36).slice(2, 8)}`);
   const [playerName] = useState(() => userName || `Jugador${Math.floor(Math.random() * 1000)}`);
   const [gameId] = useState(() => propGameId || "test-game-1");
-  const hasJoinedRef = useRef(false); // Track if we've already joined
+  const hasJoinedRef = useRef(false);
   const [alerts, setAlerts] = useState<InGameAlert[]>([]);
   const [lastHandResult, setLastHandResult] = useState<HandResult | null>(null);
   const [handHistory, setHandHistory] = useState<HandResult[]>([]);
@@ -312,82 +366,51 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
     onError: (err) => console.error("[Brisca] Error:", err),
   });
 
-  // Connect on mount - ONLY ONCE
   useEffect(() => {
     connect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty deps - connect only on mount
+  }, []);
 
-  // Auto-create or join game when connected (ONLY ONCE)
   useEffect(() => {
     if (!isConnected || hasJoinedRef.current) return;
-
     const initGame = async () => {
       try {
         await createGame(gameId, 2, 4);
-        console.log("[Brisca] Game created/found, joining...");
       } catch (e) {
         console.log("[Brisca] Error creating game:", e);
       }
       joinGame(gameId, playerId, playerName);
-      hasJoinedRef.current = true; // Mark as joined
-      
-      // Request game state after joining
-      setTimeout(() => {
-        requestGameState(gameId);
-      }, 300);
+      hasJoinedRef.current = true;
+      setTimeout(() => { requestGameState(gameId); }, 300);
     };
-
     initGame();
-  }, [isConnected]); // ONLY depend on isConnected, not on the functions!
+  }, [isConnected]);
 
-  // Convert backend state to local format
   const { players, trumpCard, trumpSuit, remainingCards, currentPlayerId, currentTrick, phase, winner } = useMemo(() => {
     if (!gameState) {
       return { players: [], trumpCard: null, trumpSuit: null, remainingCards: 0, currentPlayerId: null, currentTrick: {}, phase: "waiting" as const, winner: null };
     }
-
-    // Find my index and arrange players relative to me
     const myIndex = gameState.players.findIndex(p => p.id === playerId);
     const playerCount = gameState.players.length;
-    
     const players: Player[] = gameState.players.map((p, i) => {
-      // Calculate position relative to me
       const relativeIndex = (i - myIndex + playerCount) % playerCount;
       const pos = PLAYER_POSITIONS[relativeIndex] || "bottom";
-      
       return {
-        id: p.id,
-        name: p.name,
-        hand: p.hand.map(convertCard),
-        score: p.score,
-        pos,
-        emoji: PLAYER_EMOJIS[i % 4],
-        clr: PLAYER_COLORS[i % 4],
-        isMe: p.id === playerId,
+        id: p.id, name: p.name, hand: p.hand.map(convertCard), score: p.score,
+        pos, emoji: PLAYER_EMOJIS[i % 4], clr: PLAYER_COLORS[i % 4], isMe: p.id === playerId,
       };
     });
-
     const trumpCard = gameState.trumpCard ? convertCard(gameState.trumpCard) : null;
     const trumpSuit = gameState.trumpSuit ? SUIT_MAP[gameState.trumpSuit] : null;
-    
-    // Convert trick
     const currentTrick: Record<string, Card> = {};
     if (gameState.currentTrick?.playedCards) {
       for (const [pid, cardDto] of Object.entries(gameState.currentTrick.playedCards)) {
         currentTrick[pid] = convertCard(cardDto);
       }
     }
-
     const phase: RoundPhase = gameState.state === "WAITING_FOR_PLAYERS" ? "waiting"
-      : gameState.state === "IN_PROGRESS" ? "playing"
-      : "finished";
-
-    const winner = gameState.winner ? {
-      id: gameState.winner.id,
-      name: gameState.winner.name,
-    } : null;
-
+      : gameState.state === "IN_PROGRESS" ? "playing" : "finished";
+    const winner = gameState.winner ? { id: gameState.winner.id, name: gameState.winner.name } : null;
     return { players, trumpCard, trumpSuit, remainingCards: gameState.remainingCards, currentPlayerId: gameState.currentPlayerId, currentTrick, phase, winner };
   }, [gameState, playerId]);
 
@@ -400,9 +423,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   const pushAlert = useCallback((text: string, tone: "info" | "success" = "info") => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     setAlerts(prev => [...prev, { id, text, tone }]);
-    window.setTimeout(() => {
-      setAlerts(prev => prev.filter(a => a.id !== id));
-    }, 4200);
+    window.setTimeout(() => { setAlerts(prev => prev.filter(a => a.id !== id)); }, 4200);
   }, []);
 
   const handlePlayCard = useCallback((card: Card) => {
@@ -413,33 +434,16 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   const handleAnimatedPlayCard = useCallback((card: Card, sourceEl: HTMLElement) => {
     if (!isMyTurn || phase !== "playing" || isAnimatingPlay) return;
     const targetEl = bottomTrickTargetRef.current ?? trickCenterRef.current;
-    if (!targetEl) {
-      handlePlayCard(card);
-      return;
-    }
-
+    if (!targetEl) { handlePlayCard(card); return; }
     const sourceRect = sourceEl.getBoundingClientRect();
     const targetRect = targetEl.getBoundingClientRect();
-
     const deltaX = (targetRect.left + targetRect.width / 2) - (sourceRect.left + sourceRect.width / 2);
     const deltaY = (targetRect.top + targetRect.height / 2) - (sourceRect.top + sourceRect.height / 2);
-
     setSelectedCardId(card.id);
     setIsAnimatingPlay(true);
-    setFlyingCard({
-      card,
-      from: { x: sourceRect.left, y: sourceRect.top, w: sourceRect.width, h: sourceRect.height },
-      delta: { x: deltaX, y: deltaY },
-      active: false,
-    });
-
-    requestAnimationFrame(() => {
-      setFlyingCard(prev => (prev ? { ...prev, active: true } : prev));
-    });
-
-    if (flyTimeoutRef.current) {
-      window.clearTimeout(flyTimeoutRef.current);
-    }
+    setFlyingCard({ card, from: { x: sourceRect.left, y: sourceRect.top, w: sourceRect.width, h: sourceRect.height }, delta: { x: deltaX, y: deltaY }, active: false });
+    requestAnimationFrame(() => { setFlyingCard(prev => (prev ? { ...prev, active: true } : prev)); });
+    if (flyTimeoutRef.current) window.clearTimeout(flyTimeoutRef.current);
     flyTimeoutRef.current = window.setTimeout(() => {
       handlePlayCard(card);
       setFlyingCard(null);
@@ -449,30 +453,22 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
     }, 430);
   }, [isMyTurn, phase, isAnimatingPlay, handlePlayCard]);
 
-  const handleStartGame = useCallback(() => {
-    startGame(gameId);
-  }, [gameId, startGame]);
+  const handleStartGame = useCallback(() => { startGame(gameId); }, [gameId, startGame]);
 
   const byPos = (pos: Pos): Player | undefined => players.find(p => p.pos === pos);
   const playedBy = (pid: string): Card | undefined => currentTrick[pid];
 
   useEffect(() => {
-    if (phase !== "playing") {
-      previousTrickRef.current = { ...currentTrick };
-      return;
-    }
-
+    if (phase !== "playing") { previousTrickRef.current = { ...currentTrick }; return; }
     const prevTrick = previousTrickRef.current;
     const newCards = Object.entries(currentTrick).filter(([pid]) => !prevTrick[pid] && pid !== playerId);
     if (newCards.length > 0) {
       const animations: OverlayCardAnimation[] = [];
-
       for (const [pid, card] of newCards) {
         const pos = posByPlayerId[pid];
         const sourceEl = pos ? handSourceRefs.current[pos] : null;
         const targetEl = pos ? trickSlotRefs.current[pos] : null;
         if (!sourceEl || !targetEl) continue;
-
         const sourceRect = sourceEl.getBoundingClientRect();
         const targetRect = targetEl.getBoundingClientRect();
         const startW = Math.min(62, sourceRect.width * 0.45);
@@ -481,191 +477,242 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
         const startY = sourceRect.top + sourceRect.height / 2 - startH / 2;
         const deltaX = (targetRect.left + targetRect.width / 2) - (startX + startW / 2);
         const deltaY = (targetRect.top + targetRect.height / 2) - (startY + startH / 2);
-
         animations.push({
-          id: `opp-${pid}-${card.id}-${Date.now()}`,
-          card,
+          id: `opp-${pid}-${card.id}-${Date.now()}`, card,
           from: { x: startX, y: startY, w: startW, h: startH },
-          delta: { x: deltaX, y: deltaY },
-          active: false,
+          delta: { x: deltaX, y: deltaY }, active: false,
           rotateTo: pos === "left" ? 7 : pos === "right" ? -7 : 0,
-          scaleTo: 0.93,
-          fadeTo: 0.96,
-          durationMs: 420,
+          scaleTo: 0.93, fadeTo: 0.96, durationMs: 420,
         });
       }
-
       if (animations.length > 0) {
         setOpponentFlyingCards(prev => [...prev, ...animations]);
         requestAnimationFrame(() => {
-          setOpponentFlyingCards(prev =>
-            prev.map(anim => animations.some(a => a.id === anim.id) ? { ...anim, active: true } : anim)
-          );
+          setOpponentFlyingCards(prev => prev.map(anim => animations.some(a => a.id === anim.id) ? { ...anim, active: true } : anim));
         });
-
         const timeout = window.setTimeout(() => {
           setOpponentFlyingCards(prev => prev.filter(anim => !animations.some(a => a.id === anim.id)));
         }, 450);
         animationTimeoutsRef.current.push(timeout);
       }
     }
-
     previousTrickRef.current = { ...currentTrick };
   }, [phase, currentTrick, playerId, posByPlayerId]);
 
   useEffect(() => {
     const scoresById = Object.fromEntries(players.map(p => [p.id, p.score]));
     const prev = previousRoundRef.current;
-
     if (prev && phase === "playing") {
       if (currentPlayerId === playerId && prev.currentPlayerId !== playerId) {
         pushAlert("Es tu turno. Juega una carta.", "info");
       }
-
       const trickResolved = prev.trickCardCount > 0 && trickCardCount === 0;
       if (trickResolved && currentPlayerId) {
         const winnerPlayer = players.find(p => p.id === currentPlayerId);
         if (winnerPlayer) {
           const points = Math.max(0, winnerPlayer.score - (prev.scoresById[winnerPlayer.id] ?? 0));
-
           const winnerBadge = badgeRefs.current[winnerPlayer.pos];
           if (winnerBadge) {
             const winnerRect = winnerBadge.getBoundingClientRect();
             const collectAnimations: OverlayCardAnimation[] = [];
-
             for (const [pid, card] of Object.entries(prev.trickCardsByPlayer)) {
               const pos = posByPlayerId[pid];
               const sourceEl = pos ? trickSlotRefs.current[pos] : null;
               if (!sourceEl) continue;
-
               const sourceRect = sourceEl.getBoundingClientRect();
               const deltaX = (winnerRect.left + winnerRect.width / 2) - (sourceRect.left + sourceRect.width / 2);
               const deltaY = (winnerRect.top + winnerRect.height / 2) - (sourceRect.top + sourceRect.height / 2);
               collectAnimations.push({
-                id: `collect-${pid}-${card.id}-${Date.now()}`,
-                card,
+                id: `collect-${pid}-${card.id}-${Date.now()}`, card,
                 from: { x: sourceRect.left, y: sourceRect.top, w: sourceRect.width, h: sourceRect.height },
-                delta: { x: deltaX, y: deltaY },
-                active: false,
-                rotateTo: (Math.random() - 0.5) * 18,
-                scaleTo: 0.54,
-                fadeTo: 0.25,
-                durationMs: 560,
+                delta: { x: deltaX, y: deltaY }, active: false,
+                rotateTo: (Math.random() - 0.5) * 18, scaleTo: 0.54, fadeTo: 0.25, durationMs: 560,
               });
             }
-
             if (collectAnimations.length > 0) {
               setTrickCollectCards(collectAnimations);
-              requestAnimationFrame(() => {
-                setTrickCollectCards(prevCards => prevCards.map(anim => ({ ...anim, active: true })));
-              });
-
-              const clearCollect = window.setTimeout(() => {
-                setTrickCollectCards([]);
-              }, 620);
+              requestAnimationFrame(() => { setTrickCollectCards(prevCards => prevCards.map(anim => ({ ...anim, active: true }))); });
+              const clearCollect = window.setTimeout(() => { setTrickCollectCards([]); }, 620);
               animationTimeoutsRef.current.push(clearCollect);
             }
-
-            setTrickPointsPop({
-              text: points > 0 ? `+${points}` : "+0",
-              x: winnerRect.left + winnerRect.width / 2,
-              y: winnerRect.top - 10,
-              active: false,
-            });
-            requestAnimationFrame(() => {
-              setTrickPointsPop(prevPop => (prevPop ? { ...prevPop, active: true } : prevPop));
-            });
-            const clearPop = window.setTimeout(() => {
-              setTrickPointsPop(null);
-            }, 900);
+            setTrickPointsPop({ text: points > 0 ? `+${points}` : "+0", x: winnerRect.left + winnerRect.width / 2, y: winnerRect.top - 10, active: false });
+            requestAnimationFrame(() => { setTrickPointsPop(prevPop => (prevPop ? { ...prevPop, active: true } : prevPop)); });
+            const clearPop = window.setTimeout(() => { setTrickPointsPop(null); }, 900);
             animationTimeoutsRef.current.push(clearPop);
           }
-
-          const result: HandResult = {
-            handNumber: handHistory.length + 1,
-            winnerId: winnerPlayer.id,
-            winnerName: winnerPlayer.name,
-            points,
-          };
-
+          const result: HandResult = { handNumber: handHistory.length + 1, winnerId: winnerPlayer.id, winnerName: winnerPlayer.name, points };
           setLastHandResult(result);
           setHandHistory(old => [result, ...old].slice(0, 5));
           pushAlert(`Mano ${result.handNumber}: gana ${winnerPlayer.name}${points > 0 ? ` (+${points} pts)` : ""}.`, "success");
         }
       }
     }
-
-    previousRoundRef.current = {
-      phase,
-      currentPlayerId,
-      trickCardCount,
-      scoresById,
-      trickCardsByPlayer: { ...currentTrick },
-    };
+    previousRoundRef.current = { phase, currentPlayerId, trickCardCount, scoresById, trickCardsByPlayer: { ...currentTrick } };
   }, [phase, currentPlayerId, playerId, players, trickCardCount, handHistory.length, pushAlert, currentTrick, posByPlayerId]);
 
   useEffect(() => () => {
-    if (flyTimeoutRef.current) {
-      window.clearTimeout(flyTimeoutRef.current);
-    }
+    if (flyTimeoutRef.current) window.clearTimeout(flyTimeoutRef.current);
     animationTimeoutsRef.current.forEach(timeout => window.clearTimeout(timeout));
     animationTimeoutsRef.current = [];
   }, []);
 
-  // Sidebar
+  // Dark fantasy sidebar
   const Sidebar = () => (
-    <nav className="absolute left-6 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-8 p-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full shadow-2xl">
-      <button className="p-2 hover:bg-white/20 rounded-full"><User size={24} /></button>
-      <button className="p-2 hover:bg-white/20 rounded-full"><DollarSign size={24} /></button>
-      <button onClick={() => router.push("/lobby")} className="p-2 hover:bg-white/20 rounded-full"><Home size={24} /></button>
-      <div className="h-px bg-white/20 w-8 self-center my-2" />
+    <nav style={{
+      position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
+      zIndex: 20, display: "flex", flexDirection: "column", gap: 6,
+      padding: "12px 8px",
+      background: "linear-gradient(180deg, rgba(10,8,25,0.92), rgba(20,10,40,0.88))",
+      backdropFilter: "blur(12px)",
+      border: "1px solid rgba(100,80,200,0.35)",
+      borderRadius: 12,
+      boxShadow: "0 0 20px rgba(100,80,200,0.15), inset 0 1px 0 rgba(255,255,255,0.04)",
+    }}>
+      {[
+        { icon: <User size={18} />, onClick: undefined },
+        { icon: <DollarSign size={18} />, onClick: undefined },
+        { icon: <Home size={18} />, onClick: () => router.push("/lobby") },
+      ].map((btn, i) => (
+        <button key={i} onClick={btn.onClick} style={{
+          padding: "9px", background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)",
+          borderRadius: 8, color: "rgba(200,180,255,0.8)", cursor: "pointer",
+          transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center",
+        }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(139,92,246,0.28)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(139,92,246,0.7)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(139,92,246,0.12)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(139,92,246,0.3)"; }}>
+          {btn.icon}
+        </button>
+      ))}
+      <div style={{ height: 1, background: "rgba(139,92,246,0.2)", margin: "2px 0" }} />
       <MuteButton variant="sidebar" />
-      <div className="h-px bg-white/20 w-8 self-center my-2" />
-      <button onClick={() => router.push("/")} className="p-2 hover:bg-white/20 rounded-full text-red-400" title="Salir"><LogOut size={24} /></button>
+      <div style={{ height: 1, background: "rgba(139,92,246,0.2)", margin: "2px 0" }} />
+      <button onClick={() => router.push("/")} style={{
+        padding: "9px", background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)",
+        borderRadius: 8, color: "rgba(252,165,165,0.8)", cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}
+        title="Salir"
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.28)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.12)"; }}>
+        <LogOut size={18} />
+      </button>
     </nav>
   );
 
-  // Loading/Connecting
+  // Dark fantasy background
+  const BG = () => (
+    <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+      {/* Stone/dark base */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: "linear-gradient(180deg, #0d1117 0%, #111827 30%, #0f1923 60%, #0d1117 100%)",
+      }} />
+      {/* Background image */}
+      <div style={{
+        position: "absolute", inset: 0,
+        backgroundImage: `url('/images/backgroundbrisca.jpg')`,
+        backgroundSize: "cover", backgroundPosition: "center 30%",
+        opacity: 0.28,
+      }} />
+      {/* Stone texture overlay */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `
+          radial-gradient(ellipse 80% 50% at 50% 50%, rgba(20,10,50,0.55) 0%, transparent 70%),
+          radial-gradient(ellipse 60% 40% at 30% 20%, rgba(34,211,238,0.04) 0%, transparent 60%),
+          radial-gradient(ellipse 60% 40% at 70% 80%, rgba(139,92,246,0.06) 0%, transparent 60%)
+        `,
+      }} />
+      {/* Vertical dark vignette on sides */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: "linear-gradient(90deg, rgba(0,0,0,0.7) 0%, transparent 15%, transparent 85%, rgba(0,0,0,0.7) 100%)",
+      }} />
+      {/* Top dark fade */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: "linear-gradient(180deg, rgba(0,0,0,0.65) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.8) 100%)",
+      }} />
+    </div>
+  );
+
   if (connectionStatus !== "connected") {
     return (
-      <div className="relative min-h-screen w-full text-white overflow-hidden bg-slate-900">
-        <div className="absolute inset-0 z-0 bg-cover bg-no-repeat"
-          style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.82), rgba(0,0,0,0.55)), url('/images/backgroundbrisca.jpg')`, backgroundPosition: "center 30%" }} />
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <div className="text-center p-10 rounded-3xl border-2 border-yellow-500/40 bg-green-900/95">
-            <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-yellow-500" />
-            <h2 className="text-2xl font-bold mb-2">Conectando...</h2>
-            <p className="text-white/60">Estableciendo conexión</p>
-            {error && <p className="text-red-400 mt-4">{error}</p>}
+      <div style={{ position: "relative", minHeight: "100vh", width: "100%", color: "white", overflow: "hidden", background: "#0d1117" }}>
+        <BG />
+        <div style={{ position: "relative", zIndex: 10, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{
+            textAlign: "center", padding: "48px 52px", borderRadius: 16,
+            background: "linear-gradient(135deg, rgba(10,8,25,0.97), rgba(20,10,40,0.95))",
+            border: "1.5px solid rgba(34,211,238,0.4)",
+            boxShadow: "0 0 60px rgba(34,211,238,0.08), 0 0 0 1px rgba(100,80,200,0.2)",
+          }}>
+            <Loader2 style={{ width: 48, height: 48, animation: "spin 1s linear infinite", margin: "0 auto 16px", color: "#22d3ee" }} />
+            <h2 style={{ fontSize: 22, fontWeight: "bold", marginBottom: 8, fontFamily: "Georgia,serif", color: "#e2e8f0" }}>Conectando...</h2>
+            <p style={{ color: "rgba(148,163,184,0.7)" }}>Estableciendo conexión</p>
+            {error && <p style={{ color: "#f87171", marginTop: 16 }}>{error}</p>}
           </div>
         </div>
       </div>
     );
   }
 
-  // Waiting for players
   if (phase === "waiting") {
     return (
-      <div className="relative min-h-screen w-full text-white overflow-hidden bg-slate-900">
-        <div className="absolute inset-0 z-0 bg-cover bg-no-repeat"
-          style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.82), rgba(0,0,0,0.55)), url('/images/backgroundbrisca.jpg')`, backgroundPosition: "center 30%" }} />
+      <div style={{ position: "relative", minHeight: "100vh", width: "100%", color: "white", overflow: "hidden", background: "#0d1117" }}>
+        <BG />
         <Sidebar />
         <div style={{ position: "relative", zIndex: 10, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Georgia,serif" }}>
-          <div style={{ textAlign: "center", padding: "40px 48px", borderRadius: 32, border: "2px solid rgba(234,179,8,0.45)", background: "rgba(10,60,28,0.97)", boxShadow: "0 0 80px rgba(234,179,8,0.12)", maxWidth: 440 }}>
-            <h1 style={{ fontSize: 52, fontWeight: 900, fontStyle: "italic", color: "#fbbf24", letterSpacing: 8, marginBottom: 4, textShadow: "0 0 30px rgba(251,191,36,0.35)" }}>BRISCA</h1>
-            <p style={{ color: "#6ee7b7", fontSize: 12, marginBottom: 16, letterSpacing: 3 }}>MESA: {gameId}</p>
-            
+          <div style={{
+            textAlign: "center", padding: "44px 52px", borderRadius: 20,
+            background: "linear-gradient(135deg, rgba(10,8,25,0.97), rgba(20,10,45,0.95))",
+            border: "2px solid rgba(34,211,238,0.35)",
+            boxShadow: "0 0 80px rgba(34,211,238,0.08), 0 0 0 1px rgba(100,80,200,0.15), inset 0 1px 0 rgba(255,255,255,0.04)",
+            maxWidth: 440,
+          }}>
+            {/* Gothic arch top ornament */}
+            <div style={{ marginBottom: 16 }}>
+              <svg width="120" height="28" viewBox="0 0 120 28">
+                <path d="M10,28 Q10,8 60,4 Q110,8 110,28" fill="none" stroke="rgba(34,211,238,0.45)" strokeWidth="1.5" />
+                <circle cx="60" cy="4" r="3" fill="rgba(34,211,238,0.6)" />
+                <circle cx="10" cy="28" r="2" fill="rgba(139,92,246,0.6)" />
+                <circle cx="110" cy="28" r="2" fill="rgba(139,92,246,0.6)" />
+              </svg>
+            </div>
+            <h1 style={{
+              fontSize: 56, fontWeight: 900, fontStyle: "italic", color: "#22d3ee",
+              letterSpacing: 10, marginBottom: 4,
+              textShadow: "0 0 30px rgba(34,211,238,0.5), 0 0 60px rgba(34,211,238,0.2)",
+              fontFamily: "Georgia,serif",
+            }}>BRISCA</h1>
+            <p style={{ color: "rgba(139,92,246,0.8)", fontSize: 11, marginBottom: 24, letterSpacing: 4 }}>MESA: {gameId}</p>
+
             <div style={{ marginBottom: 24 }}>
-              <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 14, marginBottom: 12 }}>Jugadores ({players.length}/4):</p>
+              <p style={{ color: "rgba(148,163,184,0.65)", fontSize: 13, marginBottom: 12, letterSpacing: 1 }}>
+                JUGADORES ({players.length}/4)
+              </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {players.map((p, i) => (
-                  <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 16px", borderRadius: 12, background: `${PLAYER_COLORS[i]}22`, border: `1px solid ${PLAYER_COLORS[i]}55` }}>
-                    <span style={{ color: PLAYER_COLORS[i] }}>{PLAYER_EMOJIS[i]} {p.name}{p.isMe && " (Tú)"}</span>
-                    <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 12 }}>Listo</span>
+                  <div key={p.id} style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "10px 16px", borderRadius: 10,
+                    background: `linear-gradient(135deg, ${PLAYER_COLORS[i]}12, transparent)`,
+                    border: `1px solid ${PLAYER_COLORS[i]}44`,
+                    boxShadow: `0 0 8px ${PLAYER_COLORS[i]}15`,
+                  }}>
+                    <span style={{ color: PLAYER_COLORS[i], fontWeight: "bold" }}>{PLAYER_EMOJIS[i]} {p.name}{p.isMe && " (Tú)"}</span>
+                    <div style={{
+                      width: 8, height: 8, borderRadius: "50%",
+                      background: "#22d3ee", boxShadow: "0 0 6px #22d3ee",
+                    }} />
                   </div>
                 ))}
                 {players.length < 4 && (
-                  <div style={{ padding: "12px 16px", borderRadius: 12, border: "2px dashed rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.4)" }}>
+                  <div style={{
+                    padding: "14px 16px", borderRadius: 10,
+                    border: "1.5px dashed rgba(100,80,200,0.25)",
+                    color: "rgba(148,163,184,0.35)", fontSize: 13,
+                  }}>
                     Esperando jugadores...
                   </div>
                 )}
@@ -673,17 +720,27 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
             </div>
 
             {canStart && (
-              <button onClick={handleStartGame}
-                style={{ width: "100%", background: "#fbbf24", color: "#052a12", fontWeight: "bold", fontSize: 16, padding: "14px 28px", borderRadius: 14, border: "none", cursor: "pointer", fontFamily: "Georgia,serif" }}>
-                ¡Iniciar Partida!
-              </button>
+              <button onClick={handleStartGame} style={{
+                width: "100%",
+                background: "linear-gradient(135deg, rgba(34,211,238,0.9), rgba(6,182,212,0.8))",
+                color: "#0a0820", fontWeight: "bold", fontSize: 16,
+                padding: "14px 28px", borderRadius: 10, border: "none", cursor: "pointer",
+                fontFamily: "Georgia,serif", letterSpacing: 2,
+                boxShadow: "0 0 20px rgba(34,211,238,0.4), 0 4px 14px rgba(0,0,0,0.4)",
+                textTransform: "uppercase",
+              }}>¡Iniciar Partida!</button>
             )}
             {!canStart && players.length < 2 && (
-              <p style={{ color: "rgba(251,191,36,0.7)", fontSize: 13 }}>Se necesitan al menos 2 jugadores</p>
+              <p style={{ color: "rgba(34,211,238,0.6)", fontSize: 13 }}>Se necesitan al menos 2 jugadores</p>
             )}
 
-            <div style={{ marginTop: 24, padding: "14px 18px", borderRadius: 12, background: "rgba(0,0,0,0.3)", color: "rgba(255,255,255,0.45)", fontSize: 11, lineHeight: 1.8, textAlign: "left" }}>
-              <strong style={{ color: "rgba(255,255,255,0.7)", display: "block", marginBottom: 4 }}>Reglas:</strong>
+            <div style={{
+              marginTop: 24, padding: "14px 18px", borderRadius: 10,
+              background: "rgba(0,0,0,0.35)",
+              border: "1px solid rgba(100,80,200,0.2)",
+              color: "rgba(148,163,184,0.5)", fontSize: 11, lineHeight: 2, textAlign: "left",
+            }}>
+              <strong style={{ color: "rgba(200,180,255,0.7)", display: "block", marginBottom: 6, letterSpacing: 1 }}>REGLAS</strong>
               As·11pts · Tres·10pts · Rey·4pts · Caballo·3pts · Sota·2pts<br />
               · Triunfo gana cualquier carta de otro palo<br />
               · No hay obligación de seguir palo
@@ -694,85 +751,73 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
     );
   }
 
-  // Game finished
   if (phase === "finished") {
     const winnerPlayer = players.find(p => p.id === winner?.id);
     const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
     const totalPoints = sortedPlayers.reduce((sum, p) => sum + p.score, 0);
-    
     return (
-      <div className="relative min-h-screen w-full text-white overflow-hidden bg-slate-900">
-        <div className="absolute inset-0 z-0 bg-cover bg-no-repeat"
-          style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.82), rgba(0,0,0,0.55)), url('/images/backgroundbrisca.jpg')`, backgroundPosition: "center 30%" }} />
+      <div style={{ position: "relative", minHeight: "100vh", width: "100%", color: "white", overflow: "hidden", background: "#0d1117" }}>
+        <BG />
         <Sidebar />
         <div style={{ position: "relative", zIndex: 10, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Georgia,serif" }}>
-          <div style={{ textAlign: "center", padding: "44px 52px", borderRadius: 36, border: "3px solid #fbbf24", background: "#0a4d22", boxShadow: "0 0 70px rgba(251,191,36,0.18)", maxWidth: 480 }}>
-            <div style={{ fontSize: 60, marginBottom: 8 }}>🏆</div>
-            <h2 style={{ fontSize: 26, fontWeight: "bold", color: "white", marginBottom: 8 }}>¡Partida Terminada!</h2>
-            
-            {/* Winner announcement with points */}
-            <div style={{ 
-              background: "linear-gradient(135deg, rgba(251,191,36,0.2), rgba(251,191,36,0.05))", 
-              border: "2px solid rgba(251,191,36,0.4)", 
-              borderRadius: 16, 
-              padding: "16px 20px", 
-              marginBottom: 20 
+          <div style={{
+            textAlign: "center", padding: "44px 52px", borderRadius: 20,
+            background: "linear-gradient(135deg, rgba(10,8,25,0.98), rgba(20,10,45,0.96))",
+            border: "2px solid rgba(34,211,238,0.4)",
+            boxShadow: "0 0 80px rgba(34,211,238,0.1), 0 0 0 1px rgba(100,80,200,0.2)",
+            maxWidth: 480,
+          }}>
+            <div style={{ fontSize: 56, marginBottom: 8 }}>🏆</div>
+            <h2 style={{ fontSize: 24, fontWeight: "bold", color: "#e2e8f0", marginBottom: 16, letterSpacing: 2 }}>¡PARTIDA TERMINADA!</h2>
+            <div style={{
+              background: "linear-gradient(135deg, rgba(34,211,238,0.12), rgba(139,92,246,0.08))",
+              border: "1.5px solid rgba(34,211,238,0.35)",
+              borderRadius: 12, padding: "16px 20px", marginBottom: 20,
+              boxShadow: "0 0 20px rgba(34,211,238,0.08)",
             }}>
-              <p style={{ fontSize: 18, color: "#fde68a", marginBottom: 4 }}>
-                {winnerPlayer?.emoji} <strong>{winnerPlayer?.name || winner?.name}</strong>
+              <p style={{ fontSize: 17, color: "#94a3b8", marginBottom: 6 }}>
+                {winnerPlayer?.emoji} <strong style={{ color: "#22d3ee" }}>{winnerPlayer?.name || winner?.name}</strong>
                 {winnerPlayer?.isMe && " (Tú)"}
               </p>
-              <p style={{ fontSize: 28, fontWeight: 900, color: "#fbbf24", marginBottom: 4 }}>
+              <p style={{ fontSize: 30, fontWeight: 900, color: "#22d3ee", marginBottom: 4, textShadow: "0 0 20px rgba(34,211,238,0.4)" }}>
                 ¡GANA CON {winnerPlayer?.score || 0} PUNTOS!
               </p>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
-                de {totalPoints} puntos totales en juego
-              </p>
+              <p style={{ fontSize: 12, color: "rgba(148,163,184,0.5)" }}>de {totalPoints} puntos totales en juego</p>
             </div>
-
-            {/* Scoreboard */}
             <div style={{ marginBottom: 20 }}>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 8, letterSpacing: 2 }}>TABLA DE POSICIONES</p>
+              <p style={{ fontSize: 11, color: "rgba(148,163,184,0.5)", marginBottom: 10, letterSpacing: 2 }}>TABLA DE POSICIONES</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {sortedPlayers.map((p, i) => (
-                  <div key={p.id} style={{ 
-                    display: "flex", 
-                    justifyContent: "space-between", 
-                    alignItems: "center", 
-                    padding: "10px 16px", 
-                    borderRadius: 12, 
-                    background: i === 0 ? `${p.clr}22` : "rgba(255,255,255,0.05)", 
-                    border: `1.5px solid ${i === 0 ? p.clr : "rgba(255,255,255,0.1)"}` 
+                  <div key={p.id} style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    padding: "10px 16px", borderRadius: 10,
+                    background: i === 0 ? `linear-gradient(135deg, ${p.clr}18, transparent)` : "rgba(255,255,255,0.03)",
+                    border: `1.5px solid ${i === 0 ? p.clr + "66" : "rgba(100,80,200,0.2)"}`,
+                    boxShadow: i === 0 ? `0 0 12px ${p.clr}15` : "none",
                   }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <span style={{ 
-                        width: 24, 
-                        height: 24, 
-                        borderRadius: "50%", 
-                        background: i === 0 ? "#fbbf24" : i === 1 ? "#94a3b8" : i === 2 ? "#b45309" : "rgba(255,255,255,0.1)",
-                        display: "flex", 
-                        alignItems: "center", 
-                        justifyContent: "center", 
-                        fontSize: 12, 
-                        fontWeight: "bold",
-                        color: i < 3 ? "#000" : "#fff"
-                      }}>
-                        {i + 1}
-                      </span>
-                      <span style={{ color: p.clr, fontWeight: "bold", fontSize: 14 }}>
-                        {p.emoji} {p.name}{p.isMe && " (Tú)"}
-                      </span>
+                      <span style={{
+                        width: 26, height: 26, borderRadius: "50%",
+                        background: i === 0 ? "linear-gradient(135deg,#22d3ee,#0891b2)" : i === 1 ? "rgba(148,163,184,0.3)" : "rgba(100,80,200,0.2)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 12, fontWeight: "bold",
+                        color: i === 0 ? "#000" : "#fff",
+                        border: i === 0 ? "1px solid #22d3ee" : "1px solid rgba(255,255,255,0.15)",
+                      }}>{i + 1}</span>
+                      <span style={{ color: p.clr, fontWeight: "bold", fontSize: 14 }}>{p.emoji} {p.name}{p.isMe && " (Tú)"}</span>
                     </div>
-                    <span style={{ color: "white", fontSize: 20, fontWeight: 900 }}>{p.score} pts</span>
+                    <span style={{ color: "white", fontSize: 20, fontWeight: 900 }}>{p.score}</span>
                   </div>
                 ))}
               </div>
             </div>
-
-            <button onClick={() => window.location.reload()}
-              style={{ background: "#fbbf24", color: "#052a12", fontWeight: "bold", fontSize: 15, padding: "12px 28px", borderRadius: 24, border: "none", cursor: "pointer", fontFamily: "Georgia,serif" }}>
-              Nueva Partida
-            </button>
+            <button onClick={() => window.location.reload()} style={{
+              background: "linear-gradient(135deg, rgba(34,211,238,0.9), rgba(6,182,212,0.8))",
+              color: "#0a0820", fontWeight: "bold", fontSize: 15,
+              padding: "12px 32px", borderRadius: 10, border: "none", cursor: "pointer",
+              fontFamily: "Georgia,serif", letterSpacing: 2, textTransform: "uppercase",
+              boxShadow: "0 0 20px rgba(34,211,238,0.3)",
+            }}>Nueva Partida</button>
           </div>
         </div>
       </div>
@@ -789,22 +834,26 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   const msg = isMyTurn ? "¡Tu turno! Elige una carta" : `Turno de ${players.find(p => p.id === currentPlayerId)?.name || "..."}`;
 
   return (
-    <div className="relative w-full text-white overflow-hidden bg-slate-900"
-      style={{ height: "100vh", display: "flex", flexDirection: "column", userSelect: "none", fontFamily: "sans-serif" }}>
-      <div className="absolute inset-0 z-0 bg-cover bg-no-repeat"
-        style={{ backgroundImage: `linear-gradient(rgba(5,42,18,0.93), rgba(5,42,18,0.88)), url('/images/backgroundbrisca.jpg')`, backgroundPosition: "center 30%" }} />
+    <div style={{
+      position: "relative", width: "100%", color: "white", overflow: "hidden",
+      height: "100vh", display: "flex", flexDirection: "column",
+      userSelect: "none", fontFamily: "sans-serif",
+      background: "#0d1117",
+    }}>
+      <BG />
       <Sidebar />
+
       <div style={{ position: "relative", zIndex: 10, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
 
         {/* TOP PLAYER */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "10px 0 6px", gap: 6, minHeight: topP ? 86 : 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "8px 0 6px", gap: 6, minHeight: topP ? 84 : 12 }}>
           {topP && (
             <>
               <div ref={(el) => { badgeRefs.current.top = el; }}>
                 <Badge player={topP} isLeader={currentPlayerId === topP.id} />
               </div>
               <div ref={(el) => { handSourceRefs.current.top = el; }} style={{ display: "flex", gap: 3 }}>
-                {topP.hand.map((_, i) => <CardBack key={i} w={36} h={54} />)}
+                {topP.hand.map((_, i) => <CardBack key={i} w={34} h={52} />)}
               </div>
             </>
           )}
@@ -812,18 +861,23 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
 
         {/* MIDDLE ROW */}
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", minHeight: 0 }}>
+
           {alerts.length > 0 && (
             <div style={{ position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 30, display: "flex", flexDirection: "column", gap: 8, width: "min(520px, calc(100vw - 180px))" }}>
               {alerts.map(alert => (
                 <div key={alert.id} style={{
-                  background: alert.tone === "success" ? "linear-gradient(135deg, rgba(22,163,74,0.88), rgba(21,128,61,0.75))" : "linear-gradient(135deg, rgba(30,41,59,0.88), rgba(15,23,42,0.8))",
-                  border: `1px solid ${alert.tone === "success" ? "rgba(134,239,172,0.45)" : "rgba(148,163,184,0.42)"}`,
-                  borderRadius: 14,
-                  padding: "9px 14px",
+                  background: alert.tone === "success"
+                    ? "linear-gradient(135deg, rgba(6,182,212,0.22), rgba(8,145,178,0.15))"
+                    : "linear-gradient(135deg, rgba(20,14,40,0.9), rgba(10,8,25,0.85))",
+                  border: `1px solid ${alert.tone === "success" ? "rgba(34,211,238,0.5)" : "rgba(139,92,246,0.4)"}`,
+                  borderRadius: 10,
+                  padding: "9px 16px",
                   fontSize: 13,
                   fontWeight: 600,
-                  boxShadow: "0 8px 22px rgba(0,0,0,0.35)",
+                  boxShadow: `0 8px 22px rgba(0,0,0,0.5), 0 0 12px ${alert.tone === "success" ? "rgba(34,211,238,0.12)" : "rgba(139,92,246,0.08)"}`,
                   textAlign: "center",
+                  color: alert.tone === "success" ? "#67e8f9" : "#c4b5fd",
+                  backdropFilter: "blur(8px)",
                 }}>
                   {alert.text}
                 </div>
@@ -831,52 +885,54 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
             </div>
           )}
 
+          {/* Round state panel */}
           <div style={{
-            position: "absolute",
-            top: 10,
-            right: 12,
-            zIndex: 20,
-            width: 230,
-            background: "rgba(2,6,23,0.55)",
-            border: "1px solid rgba(148,163,184,0.35)",
-            borderRadius: 14,
-            padding: "10px 12px",
-            backdropFilter: "blur(6px)",
+            position: "absolute", top: 10, right: 14, zIndex: 20, width: 220,
+            background: "linear-gradient(135deg, rgba(10,8,25,0.88), rgba(20,10,40,0.82))",
+            border: "1px solid rgba(100,80,200,0.3)",
+            borderRadius: 12, padding: "10px 14px",
+            backdropFilter: "blur(8px)",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(100,80,200,0.1)",
           }}>
-            <div style={{ fontSize: 11, color: "rgba(191,219,254,0.85)", letterSpacing: 1.5, marginBottom: 6 }}>ESTADO DE LA RONDA</div>
-            <div style={{ fontSize: 13, marginBottom: 5 }}>Mano actual: <strong>{currentHandNumber || 1}</strong></div>
-            <div style={{ fontSize: 13, marginBottom: 5 }}>Cartas en mesa: <strong>{trickCardCount}/{Math.max(players.length, 1)}</strong></div>
-            <div style={{ fontSize: 13, color: "rgba(226,232,240,0.95)" }}>
-              Última mano:{" "}
+            <div style={{ fontSize: 10, color: "rgba(139,92,246,0.85)", letterSpacing: 2, marginBottom: 8, fontFamily: "Georgia,serif" }}>ESTADO DE LA RONDA</div>
+            <div style={{ fontSize: 12, marginBottom: 5, color: "rgba(203,213,225,0.8)" }}>Mano: <strong style={{ color: "#e2e8f0" }}>{currentHandNumber || 1}</strong></div>
+            <div style={{ fontSize: 12, marginBottom: 5, color: "rgba(203,213,225,0.8)" }}>En mesa: <strong style={{ color: "#e2e8f0" }}>{trickCardCount}/{Math.max(players.length, 1)}</strong></div>
+            <div style={{ fontSize: 12, color: "rgba(203,213,225,0.8)" }}>
+              Última:{" "}
               {lastHandResult
-                ? <strong>{lastHandResult.winnerName} {lastHandResult.points > 0 ? `(+${lastHandResult.points})` : "(+0)"}</strong>
-                : <span style={{ color: "rgba(226,232,240,0.65)" }}>Aún sin ganador</span>}
+                ? <strong style={{ color: "#67e8f9" }}>{lastHandResult.winnerName} {lastHandResult.points > 0 ? `(+${lastHandResult.points})` : "(+0)"}</strong>
+                : <span style={{ color: "rgba(148,163,184,0.5)" }}>Sin ganador</span>}
             </div>
           </div>
 
+          {/* LEFT PLAYER */}
           {leftP && (
-            <div style={{ position: "absolute", left: 80, top: "50%", transform: "translateY(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+            <div style={{ position: "absolute", left: 68, top: "50%", transform: "translateY(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
               <div ref={(el) => { badgeRefs.current.left = el; }}>
                 <Badge player={leftP} isLeader={currentPlayerId === leftP.id} />
               </div>
               <div ref={(el) => { handSourceRefs.current.left = el; }} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {leftP.hand.map((_, i) => <CardBack key={i} w={32} h={48} />)}
+                {leftP.hand.map((_, i) => <CardBack key={i} w={30} h={46} />)}
               </div>
             </div>
           )}
+
+          {/* RIGHT PLAYER */}
           {rightP && (
-            <div style={{ position: "absolute", right: 80, top: "50%", transform: "translateY(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+            <div style={{ position: "absolute", right: 68, top: "50%", transform: "translateY(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
               <div ref={(el) => { badgeRefs.current.right = el; }}>
                 <Badge player={rightP} isLeader={currentPlayerId === rightP.id} />
               </div>
               <div ref={(el) => { handSourceRefs.current.right = el; }} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {rightP.hand.map((_, i) => <CardBack key={i} w={32} h={48} />)}
+                {rightP.hand.map((_, i) => <CardBack key={i} w={30} h={46} />)}
               </div>
             </div>
           )}
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+
+          {/* CENTER: Deck + Trick cross */}
+          <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
             {/* Deck + Trump */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
               <div style={{ position: "relative", width: 76, height: 110 }}>
                 {trumpCard && (
                   <div style={{ position: "absolute", top: 22, left: -22, transform: "rotate(90deg)", transformOrigin: "center", zIndex: 0 }}>
@@ -886,72 +942,142 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
                 {remainingCards > 0 && (
                   <div style={{ position: "absolute", top: 0, left: 0, zIndex: 1 }}>
                     <div style={{ position: "relative" }}>
-                      <div style={{ position: "absolute", top: 2, left: 2, width: 64, height: 96, borderRadius: 8, background: "#172554", border: "1px solid rgba(255,255,255,0.12)" }} />
+                      <div style={{
+                        position: "absolute", top: 2, left: 2, width: 64, height: 96, borderRadius: 6,
+                        background: "#0a0820", border: "1px solid rgba(100,80,200,0.3)",
+                      }} />
                       <CardBack w={64} h={96} />
-                      <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", color: "rgba(255,255,255,0.75)", fontWeight: "bold", fontSize: 13, pointerEvents: "none" }}>
+                      <div style={{
+                        position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+                        color: "#22d3ee", fontWeight: "bold", fontSize: 14, pointerEvents: "none",
+                        textShadow: "0 0 8px rgba(34,211,238,0.6)",
+                      }}>
                         {remainingCards}
                       </div>
                     </div>
                   </div>
                 )}
                 {remainingCards === 0 && !trumpCard && (
-                  <div style={{ width: 64, height: 96, borderRadius: 8, border: "2px dashed rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontSize: 10 }}>vacío</div>
+                  <div style={{
+                    width: 64, height: 96, borderRadius: 6,
+                    border: "2px dashed rgba(100,80,200,0.2)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "rgba(148,163,184,0.3)", fontSize: 10,
+                  }}>vacío</div>
                 )}
               </div>
               {trumpSuit && (
-                <div style={{ background: "rgba(0,0,0,0.45)", padding: "3px 10px", borderRadius: 8, color: "#fde68a", fontSize: 11, textAlign: "center" }}>
+                <div style={{
+                  background: "rgba(0,0,0,0.5)", padding: "4px 12px", borderRadius: 8,
+                  border: "1px solid rgba(100,80,200,0.3)",
+                  color: "#c4b5fd", fontSize: 11, textAlign: "center",
+                  backdropFilter: "blur(4px)",
+                }}>
                   {trumpSuit === "Oros" ? "🟡" : trumpSuit === "Copas" ? "🔴" : trumpSuit === "Espadas" ? "🔵" : "🟢"} {trumpSuit}
                 </div>
               )}
             </div>
+
             {/* Cross of played cards */}
             <div ref={trickCenterRef} style={{ position: "relative", width: CW * 3 + TABLE_GAP, height: CH * 3 + TABLE_GAP }}>
-              <div style={{ position: "absolute", left: CW, top: CH, width: CW + TABLE_GAP, height: CH + TABLE_GAP, borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }} />
+              {/* Center play area with gothic styling */}
+              <div style={{
+                position: "absolute", left: CW, top: CH, width: CW + TABLE_GAP, height: CH + TABLE_GAP,
+                borderRadius: 12,
+                background: "radial-gradient(ellipse at center, rgba(34,211,238,0.05), rgba(0,0,0,0.3))",
+                border: "1px solid rgba(34,211,238,0.12)",
+                boxShadow: "inset 0 0 20px rgba(0,0,0,0.5)",
+              }} />
+
+              {/* TOP trick slot */}
               <div style={{ position: "absolute", left: "50%", top: 0, transform: "translateX(-50%)" }}>
                 {topP && (
                   <div ref={(el) => { trickSlotRefs.current.top = el; }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
                     <CardSlot card={playedBy(topP.id)} w={CW} h={CH} />
-                    {playedBy(topP.id) && <span style={{ fontSize: 10, color: "rgba(226,232,240,0.78)" }}>{topP.name}</span>}
+                    {playedBy(topP.id) && <span style={{ fontSize: 10, color: "rgba(148,163,184,0.7)" }}>{topP.name}</span>}
                   </div>
                 )}
               </div>
+
+              {/* LEFT trick slot */}
               <div style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)" }}>
                 {leftP && (
                   <div ref={(el) => { trickSlotRefs.current.left = el; }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
                     <CardSlot card={playedBy(leftP.id)} w={CW} h={CH} />
-                    {playedBy(leftP.id) && <span style={{ fontSize: 10, color: "rgba(226,232,240,0.78)" }}>{leftP.name}</span>}
+                    {playedBy(leftP.id) && <span style={{ fontSize: 10, color: "rgba(148,163,184,0.7)" }}>{leftP.name}</span>}
                   </div>
                 )}
               </div>
+
+              {/* RIGHT trick slot */}
               <div style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)" }}>
                 {rightP && (
                   <div ref={(el) => { trickSlotRefs.current.right = el; }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
                     <CardSlot card={playedBy(rightP.id)} w={CW} h={CH} />
-                    {playedBy(rightP.id) && <span style={{ fontSize: 10, color: "rgba(226,232,240,0.78)" }}>{rightP.name}</span>}
+                    {playedBy(rightP.id) && <span style={{ fontSize: 10, color: "rgba(148,163,184,0.7)" }}>{rightP.name}</span>}
                   </div>
                 )}
               </div>
+
+              {/* BOTTOM trick slot + END TURN-style center indicator */}
               <div ref={bottomTrickTargetRef} style={{ position: "absolute", left: "50%", bottom: 0, transform: "translateX(-50%)" }}>
                 {botP && (
                   <div ref={(el) => { trickSlotRefs.current.bottom = el; }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
                     <CardSlot card={playedBy(botP.id)} w={CW} h={CH} />
-                    {playedBy(botP.id) && <span style={{ fontSize: 10, color: "rgba(226,232,240,0.78)" }}>{botP.name}</span>}
+                    {playedBy(botP.id) && <span style={{ fontSize: 10, color: "rgba(148,163,184,0.7)" }}>{botP.name}</span>}
                   </div>
                 )}
               </div>
+
+              {/* Central state indicator — like "END TURN" button in reference */}
+              {trickCardCount === 0 && (
+                <div style={{
+                  position: "absolute",
+                  left: "50%", top: "50%",
+                  transform: "translate(-50%, -50%)",
+                  width: 72, height: 72, borderRadius: "50%",
+                  background: "radial-gradient(circle, rgba(34,211,238,0.15), rgba(10,8,25,0.7))",
+                  border: "1.5px solid rgba(34,211,238,0.3)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  flexDirection: "column",
+                  boxShadow: "0 0 20px rgba(34,211,238,0.1), inset 0 0 16px rgba(0,0,0,0.4)",
+                  pointerEvents: "none",
+                }}>
+                  <span style={{
+                    fontSize: 9, fontWeight: "bold", color: "rgba(34,211,238,0.7)",
+                    letterSpacing: 1, textAlign: "center", lineHeight: 1.4,
+                    fontFamily: "Georgia,serif", textTransform: "uppercase",
+                  }}>{isMyTurn ? "JUEGA" : "ESPERA"}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* MESSAGE */}
-        <div style={{ textAlign: "center", padding: "4px 8px", minHeight: 24 }}>
-          <span style={{ display: "inline-block", background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)", padding: "3px 16px", borderRadius: 20, color: isMyTurn ? "#fde68a" : "#a7f3d0", fontSize: 12, fontStyle: "italic", border: "1px solid rgba(255,255,255,0.08)" }}>
+        {/* TURN MESSAGE */}
+        <div style={{ textAlign: "center", padding: "4px 8px", minHeight: 26 }}>
+          <span style={{
+            display: "inline-block",
+            background: isMyTurn
+              ? "linear-gradient(135deg, rgba(34,211,238,0.18), rgba(6,182,212,0.1))"
+              : "rgba(10,8,25,0.6)",
+            backdropFilter: "blur(6px)",
+            padding: "4px 20px", borderRadius: 20,
+            color: isMyTurn ? "#22d3ee" : "#94a3b8",
+            fontSize: 12, fontStyle: "italic",
+            border: `1px solid ${isMyTurn ? "rgba(34,211,238,0.4)" : "rgba(100,80,200,0.25)"}`,
+            boxShadow: isMyTurn ? "0 0 12px rgba(34,211,238,0.15)" : "none",
+            textShadow: isMyTurn ? "0 0 8px rgba(34,211,238,0.4)" : "none",
+          }}>
             {msg}
           </span>
         </div>
 
         {/* HUMAN HAND */}
-        <div ref={(el) => { handSourceRefs.current.bottom = el; }} style={{ display: "flex", justifyContent: "center", gap: 10, padding: "4px 0 8px", alignItems: "flex-end" }}>
+        <div
+          ref={(el) => { handSourceRefs.current.bottom = el; }}
+          style={{ display: "flex", justifyContent: "center", gap: 10, padding: "4px 0 8px", alignItems: "flex-end" }}
+        >
           {botP?.hand.map(card => (
             <button
               key={card.id}
@@ -959,11 +1085,9 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
               disabled={!isMyTurn || isAnimatingPlay}
               className={`hand-card-btn${selectedCardId === card.id ? " hand-card-btn--selected" : ""}`}
               style={{
-                background: "none",
-                border: "none",
-                padding: 0,
+                background: "none", border: "none", padding: 0,
                 cursor: isMyTurn && !isAnimatingPlay ? "pointer" : "default",
-                filter: isMyTurn && !isAnimatingPlay ? "none" : "brightness(0.8) saturate(0.8)",
+                filter: isMyTurn && !isAnimatingPlay ? "none" : "brightness(0.5) saturate(0.4)",
                 opacity: selectedCardId === card.id ? 0 : 1,
               }}>
               <CardFace card={card} w={78} h={117} highlight={isMyTurn} />
@@ -972,107 +1096,119 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
         </div>
 
         {/* BOTTOM BAR */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px 6px 80px", background: "rgba(0,0,0,0.28)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          padding: "6px 14px 6px 74px",
+          background: "linear-gradient(90deg, rgba(0,0,0,0.7), rgba(10,8,25,0.6))",
+          borderTop: "1px solid rgba(100,80,200,0.2)",
+        }}>
           {botP && <div ref={(el) => { badgeRefs.current.bottom = el; }}><Badge player={botP} isLeader={currentPlayerId === botP.id} /></div>}
-          <div style={{ color: "rgba(255,255,255,0.38)", fontSize: 10, textAlign: "right" }}>
+          <div style={{ color: "rgba(148,163,184,0.4)", fontSize: 10, textAlign: "right", fontFamily: "Georgia,serif" }}>
             {lastHandResult
-              ? `Última mano: ${lastHandResult.winnerName} (+${lastHandResult.points})`
+              ? `Última: ${lastHandResult.winnerName} (+${lastHandResult.points})`
               : "As·11 · 3·10 · R·4 · C·3 · S·2"}
           </div>
         </div>
       </div>
 
-      {/* Restart */}
-      <button onClick={() => window.location.reload()} title="Nueva partida"
-        style={{ position: "fixed", top: 10, right: 10, zIndex: 100, background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.18)", color: "white", padding: 8, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "transform 0.5s" }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "rotate(180deg)"; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "rotate(0deg)"; }}>
+      {/* Restart button — gothic style */}
+      <button
+        onClick={() => window.location.reload()}
+        title="Nueva partida"
+        style={{
+          position: "fixed", top: 12, right: 12, zIndex: 100,
+          background: "rgba(10,8,25,0.7)",
+          border: "1px solid rgba(100,80,200,0.4)",
+          color: "rgba(200,180,255,0.7)", padding: 9, borderRadius: 8, cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          transition: "all 0.4s",
+          backdropFilter: "blur(8px)",
+        }}
+        onMouseEnter={e => {
+          const el = e.currentTarget as HTMLElement;
+          el.style.transform = "rotate(180deg)";
+          el.style.borderColor = "rgba(34,211,238,0.6)";
+          el.style.color = "#22d3ee";
+        }}
+        onMouseLeave={e => {
+          const el = e.currentTarget as HTMLElement;
+          el.style.transform = "rotate(0deg)";
+          el.style.borderColor = "rgba(100,80,200,0.4)";
+          el.style.color = "rgba(200,180,255,0.7)";
+        }}>
         <RotateCcw size={16} />
       </button>
 
+      {/* Flying card (player) */}
       {flyingCard && (
-        <div
-          style={{
-            position: "fixed",
-            left: flyingCard.from.x,
-            top: flyingCard.from.y,
-            width: flyingCard.from.w,
-            height: flyingCard.from.h,
-            pointerEvents: "none",
-            zIndex: 90,
-            transform: `translate(${flyingCard.active ? flyingCard.delta.x : 0}px, ${flyingCard.active ? flyingCard.delta.y : 0}px) scale(${flyingCard.active ? 0.9 : 1}) rotate(${flyingCard.active ? -4 : 0}deg)`,
-            transformOrigin: "center",
-            transition: "transform 430ms cubic-bezier(0.22, 1, 0.36, 1), opacity 430ms ease",
-            opacity: flyingCard.active ? 0.98 : 1,
-            filter: "drop-shadow(0 12px 22px rgba(0,0,0,0.55))",
-          }}>
+        <div style={{
+          position: "fixed", left: flyingCard.from.x, top: flyingCard.from.y,
+          width: flyingCard.from.w, height: flyingCard.from.h,
+          pointerEvents: "none", zIndex: 90,
+          transform: `translate(${flyingCard.active ? flyingCard.delta.x : 0}px, ${flyingCard.active ? flyingCard.delta.y : 0}px) scale(${flyingCard.active ? 0.9 : 1}) rotate(${flyingCard.active ? -4 : 0}deg)`,
+          transformOrigin: "center",
+          transition: "transform 430ms cubic-bezier(0.22, 1, 0.36, 1), opacity 430ms ease",
+          opacity: flyingCard.active ? 0.98 : 1,
+          filter: "drop-shadow(0 12px 22px rgba(34,211,238,0.3))",
+        }}>
           <CardFace card={flyingCard.card} w={flyingCard.from.w} h={flyingCard.from.h} highlight />
         </div>
       )}
 
       {opponentFlyingCards.map((anim) => (
-        <div
-          key={anim.id}
-          style={{
-            position: "fixed",
-            left: anim.from.x,
-            top: anim.from.y,
-            width: anim.from.w,
-            height: anim.from.h,
-            pointerEvents: "none",
-            zIndex: 88,
-            transform: `translate(${anim.active ? anim.delta.x : 0}px, ${anim.active ? anim.delta.y : 0}px) scale(${anim.active ? anim.scaleTo : 1}) rotate(${anim.active ? anim.rotateTo : 0}deg)`,
-            transformOrigin: "center",
-            transition: `transform ${anim.durationMs}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${anim.durationMs}ms ease`,
-            opacity: anim.active ? anim.fadeTo : 1,
-            filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.5))",
-          }}>
+        <div key={anim.id} style={{
+          position: "fixed", left: anim.from.x, top: anim.from.y,
+          width: anim.from.w, height: anim.from.h,
+          pointerEvents: "none", zIndex: 88,
+          transform: `translate(${anim.active ? anim.delta.x : 0}px, ${anim.active ? anim.delta.y : 0}px) scale(${anim.active ? anim.scaleTo : 1}) rotate(${anim.active ? anim.rotateTo : 0}deg)`,
+          transformOrigin: "center",
+          transition: `transform ${anim.durationMs}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${anim.durationMs}ms ease`,
+          opacity: anim.active ? anim.fadeTo : 1,
+          filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.7))",
+        }}>
           <CardFace card={anim.card} w={anim.from.w} h={anim.from.h} />
         </div>
       ))}
 
       {trickCollectCards.map((anim) => (
-        <div
-          key={anim.id}
-          style={{
-            position: "fixed",
-            left: anim.from.x,
-            top: anim.from.y,
-            width: anim.from.w,
-            height: anim.from.h,
-            pointerEvents: "none",
-            zIndex: 87,
-            transform: `translate(${anim.active ? anim.delta.x : 0}px, ${anim.active ? anim.delta.y : 0}px) scale(${anim.active ? anim.scaleTo : 1}) rotate(${anim.active ? anim.rotateTo : 0}deg)`,
-            transformOrigin: "center",
-            transition: `transform ${anim.durationMs}ms cubic-bezier(0.2, 0.95, 0.2, 1), opacity ${anim.durationMs}ms ease`,
-            opacity: anim.active ? anim.fadeTo : 1,
-            filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.42))",
-          }}>
+        <div key={anim.id} style={{
+          position: "fixed", left: anim.from.x, top: anim.from.y,
+          width: anim.from.w, height: anim.from.h,
+          pointerEvents: "none", zIndex: 87,
+          transform: `translate(${anim.active ? anim.delta.x : 0}px, ${anim.active ? anim.delta.y : 0}px) scale(${anim.active ? anim.scaleTo : 1}) rotate(${anim.active ? anim.rotateTo : 0}deg)`,
+          transformOrigin: "center",
+          transition: `transform ${anim.durationMs}ms cubic-bezier(0.2, 0.95, 0.2, 1), opacity ${anim.durationMs}ms ease`,
+          opacity: anim.active ? anim.fadeTo : 1,
+          filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.6))",
+        }}>
           <CardFace card={anim.card} w={anim.from.w} h={anim.from.h} />
         </div>
       ))}
 
       {trickPointsPop && (
-        <div
-          style={{
-            position: "fixed",
-            left: trickPointsPop.x,
-            top: trickPointsPop.y,
-            zIndex: 95,
-            pointerEvents: "none",
-            transform: `translate(-50%, ${trickPointsPop.active ? "-24px" : "0px"}) scale(${trickPointsPop.active ? 1.08 : 0.92})`,
-            opacity: trickPointsPop.active ? 1 : 0,
-            transition: "transform 460ms cubic-bezier(0.16, 1, 0.3, 1), opacity 460ms ease",
-            color: "#fde68a",
-            fontWeight: 900,
-            fontSize: 28,
-            textShadow: "0 4px 16px rgba(0,0,0,0.45), 0 0 18px rgba(250,204,21,0.35)",
-          }}>
+        <div style={{
+          position: "fixed", left: trickPointsPop.x, top: trickPointsPop.y,
+          zIndex: 95, pointerEvents: "none",
+          transform: `translate(-50%, ${trickPointsPop.active ? "-28px" : "0px"}) scale(${trickPointsPop.active ? 1.1 : 0.85})`,
+          opacity: trickPointsPop.active ? 1 : 0,
+          transition: "transform 460ms cubic-bezier(0.16, 1, 0.3, 1), opacity 460ms ease",
+          color: "#22d3ee", fontWeight: 900, fontSize: 30,
+          textShadow: "0 4px 16px rgba(0,0,0,0.7), 0 0 20px rgba(34,211,238,0.5)",
+        }}>
           {trickPointsPop.text}
         </div>
       )}
 
       <style jsx>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(0.85); }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
         .hand-card-btn {
           transform: translateY(0) scale(1);
           transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), filter 220ms ease, opacity 140ms ease;
@@ -1080,12 +1216,14 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
         }
 
         .hand-card-btn:not(:disabled):hover {
-          transform: translateY(-14px) scale(1.035);
+          transform: translateY(-16px) scale(1.04);
+          filter: drop-shadow(0 0 14px rgba(34,211,238,0.45));
         }
 
         .hand-card-btn:not(:disabled):active,
         .hand-card-btn--selected {
-          transform: translateY(-20px) scale(1.05);
+          transform: translateY(-22px) scale(1.06);
+          filter: drop-shadow(0 0 18px rgba(34,211,238,0.6));
         }
       `}</style>
     </div>
