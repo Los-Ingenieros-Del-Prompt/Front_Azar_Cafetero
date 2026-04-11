@@ -48,6 +48,21 @@ interface FlyingCardAnimation {
   active: boolean;
 }
 
+interface OverlayCardAnimation extends FlyingCardAnimation {
+  id: string;
+  rotateTo: number;
+  scaleTo: number;
+  fadeTo: number;
+  durationMs: number;
+}
+
+interface TrickPointsPop {
+  text: string;
+  x: number;
+  y: number;
+  active: boolean;
+}
+
 // ============ CONSTANTS ============
 const SDARK: Record<Suit, string> = { Oros: "#78350f", Copas: "#7f1d1d", Espadas: "#1e3a8a", Bastos: "#14532d" };
 const SBRIGHT: Record<Suit, string> = { Oros: "#f59e0b", Copas: "#dc2626", Espadas: "#3b82f6", Bastos: "#15803d" };
@@ -263,14 +278,23 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [isAnimatingPlay, setIsAnimatingPlay] = useState(false);
   const [flyingCard, setFlyingCard] = useState<FlyingCardAnimation | null>(null);
+  const [opponentFlyingCards, setOpponentFlyingCards] = useState<OverlayCardAnimation[]>([]);
+  const [trickCollectCards, setTrickCollectCards] = useState<OverlayCardAnimation[]>([]);
+  const [trickPointsPop, setTrickPointsPop] = useState<TrickPointsPop | null>(null);
   const flyTimeoutRef = useRef<number | null>(null);
+  const animationTimeoutsRef = useRef<number[]>([]);
   const trickCenterRef = useRef<HTMLDivElement | null>(null);
   const bottomTrickTargetRef = useRef<HTMLDivElement | null>(null);
+  const handSourceRefs = useRef<Partial<Record<Pos, HTMLDivElement | null>>>({});
+  const trickSlotRefs = useRef<Partial<Record<Pos, HTMLDivElement | null>>>({});
+  const badgeRefs = useRef<Partial<Record<Pos, HTMLDivElement | null>>>({});
+  const previousTrickRef = useRef<Record<string, Card>>({});
   const previousRoundRef = useRef<{
     phase: RoundPhase;
     currentPlayerId: string | null;
     trickCardCount: number;
     scoresById: Record<string, number>;
+    trickCardsByPlayer: Record<string, Card>;
   } | null>(null);
 
   const {
@@ -371,6 +395,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   const canStart = phase === "waiting" && players.length >= 2;
   const trickCardCount = Object.keys(currentTrick).length;
   const currentHandNumber = handHistory.length + (trickCardCount > 0 ? 1 : 0);
+  const posByPlayerId = useMemo(() => Object.fromEntries(players.map(p => [p.id, p.pos])) as Record<string, Pos>, [players]);
 
   const pushAlert = useCallback((text: string, tone: "info" | "success" = "info") => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -432,6 +457,63 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   const playedBy = (pid: string): Card | undefined => currentTrick[pid];
 
   useEffect(() => {
+    if (phase !== "playing") {
+      previousTrickRef.current = { ...currentTrick };
+      return;
+    }
+
+    const prevTrick = previousTrickRef.current;
+    const newCards = Object.entries(currentTrick).filter(([pid]) => !prevTrick[pid] && pid !== playerId);
+    if (newCards.length > 0) {
+      const animations: OverlayCardAnimation[] = [];
+
+      for (const [pid, card] of newCards) {
+        const pos = posByPlayerId[pid];
+        const sourceEl = pos ? handSourceRefs.current[pos] : null;
+        const targetEl = pos ? trickSlotRefs.current[pos] : null;
+        if (!sourceEl || !targetEl) continue;
+
+        const sourceRect = sourceEl.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
+        const startW = Math.min(62, sourceRect.width * 0.45);
+        const startH = startW * 1.5;
+        const startX = sourceRect.left + sourceRect.width / 2 - startW / 2;
+        const startY = sourceRect.top + sourceRect.height / 2 - startH / 2;
+        const deltaX = (targetRect.left + targetRect.width / 2) - (startX + startW / 2);
+        const deltaY = (targetRect.top + targetRect.height / 2) - (startY + startH / 2);
+
+        animations.push({
+          id: `opp-${pid}-${card.id}-${Date.now()}`,
+          card,
+          from: { x: startX, y: startY, w: startW, h: startH },
+          delta: { x: deltaX, y: deltaY },
+          active: false,
+          rotateTo: pos === "left" ? 7 : pos === "right" ? -7 : 0,
+          scaleTo: 0.93,
+          fadeTo: 0.96,
+          durationMs: 420,
+        });
+      }
+
+      if (animations.length > 0) {
+        setOpponentFlyingCards(prev => [...prev, ...animations]);
+        requestAnimationFrame(() => {
+          setOpponentFlyingCards(prev =>
+            prev.map(anim => animations.some(a => a.id === anim.id) ? { ...anim, active: true } : anim)
+          );
+        });
+
+        const timeout = window.setTimeout(() => {
+          setOpponentFlyingCards(prev => prev.filter(anim => !animations.some(a => a.id === anim.id)));
+        }, 450);
+        animationTimeoutsRef.current.push(timeout);
+      }
+    }
+
+    previousTrickRef.current = { ...currentTrick };
+  }, [phase, currentTrick, playerId, posByPlayerId]);
+
+  useEffect(() => {
     const scoresById = Object.fromEntries(players.map(p => [p.id, p.score]));
     const prev = previousRoundRef.current;
 
@@ -445,6 +527,60 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
         const winnerPlayer = players.find(p => p.id === currentPlayerId);
         if (winnerPlayer) {
           const points = Math.max(0, winnerPlayer.score - (prev.scoresById[winnerPlayer.id] ?? 0));
+
+          const winnerBadge = badgeRefs.current[winnerPlayer.pos];
+          if (winnerBadge) {
+            const winnerRect = winnerBadge.getBoundingClientRect();
+            const collectAnimations: OverlayCardAnimation[] = [];
+
+            for (const [pid, card] of Object.entries(prev.trickCardsByPlayer)) {
+              const pos = posByPlayerId[pid];
+              const sourceEl = pos ? trickSlotRefs.current[pos] : null;
+              if (!sourceEl) continue;
+
+              const sourceRect = sourceEl.getBoundingClientRect();
+              const deltaX = (winnerRect.left + winnerRect.width / 2) - (sourceRect.left + sourceRect.width / 2);
+              const deltaY = (winnerRect.top + winnerRect.height / 2) - (sourceRect.top + sourceRect.height / 2);
+              collectAnimations.push({
+                id: `collect-${pid}-${card.id}-${Date.now()}`,
+                card,
+                from: { x: sourceRect.left, y: sourceRect.top, w: sourceRect.width, h: sourceRect.height },
+                delta: { x: deltaX, y: deltaY },
+                active: false,
+                rotateTo: (Math.random() - 0.5) * 18,
+                scaleTo: 0.54,
+                fadeTo: 0.25,
+                durationMs: 560,
+              });
+            }
+
+            if (collectAnimations.length > 0) {
+              setTrickCollectCards(collectAnimations);
+              requestAnimationFrame(() => {
+                setTrickCollectCards(prevCards => prevCards.map(anim => ({ ...anim, active: true })));
+              });
+
+              const clearCollect = window.setTimeout(() => {
+                setTrickCollectCards([]);
+              }, 620);
+              animationTimeoutsRef.current.push(clearCollect);
+            }
+
+            setTrickPointsPop({
+              text: points > 0 ? `+${points}` : "+0",
+              x: winnerRect.left + winnerRect.width / 2,
+              y: winnerRect.top - 10,
+              active: false,
+            });
+            requestAnimationFrame(() => {
+              setTrickPointsPop(prevPop => (prevPop ? { ...prevPop, active: true } : prevPop));
+            });
+            const clearPop = window.setTimeout(() => {
+              setTrickPointsPop(null);
+            }, 900);
+            animationTimeoutsRef.current.push(clearPop);
+          }
+
           const result: HandResult = {
             handNumber: handHistory.length + 1,
             winnerId: winnerPlayer.id,
@@ -464,13 +600,16 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
       currentPlayerId,
       trickCardCount,
       scoresById,
+      trickCardsByPlayer: { ...currentTrick },
     };
-  }, [phase, currentPlayerId, playerId, players, trickCardCount, handHistory.length, pushAlert]);
+  }, [phase, currentPlayerId, playerId, players, trickCardCount, handHistory.length, pushAlert, currentTrick, posByPlayerId]);
 
   useEffect(() => () => {
     if (flyTimeoutRef.current) {
       window.clearTimeout(flyTimeoutRef.current);
     }
+    animationTimeoutsRef.current.forEach(timeout => window.clearTimeout(timeout));
+    animationTimeoutsRef.current = [];
   }, []);
 
   // Sidebar
@@ -661,8 +800,10 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "10px 0 6px", gap: 6, minHeight: topP ? 86 : 12 }}>
           {topP && (
             <>
-              <Badge player={topP} isLeader={currentPlayerId === topP.id} />
-              <div style={{ display: "flex", gap: 3 }}>
+              <div ref={(el) => { badgeRefs.current.top = el; }}>
+                <Badge player={topP} isLeader={currentPlayerId === topP.id} />
+              </div>
+              <div ref={(el) => { handSourceRefs.current.top = el; }} style={{ display: "flex", gap: 3 }}>
                 {topP.hand.map((_, i) => <CardBack key={i} w={36} h={54} />)}
               </div>
             </>
@@ -715,16 +856,20 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
 
           {leftP && (
             <div style={{ position: "absolute", left: 80, top: "50%", transform: "translateY(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-              <Badge player={leftP} isLeader={currentPlayerId === leftP.id} />
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <div ref={(el) => { badgeRefs.current.left = el; }}>
+                <Badge player={leftP} isLeader={currentPlayerId === leftP.id} />
+              </div>
+              <div ref={(el) => { handSourceRefs.current.left = el; }} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 {leftP.hand.map((_, i) => <CardBack key={i} w={32} h={48} />)}
               </div>
             </div>
           )}
           {rightP && (
             <div style={{ position: "absolute", right: 80, top: "50%", transform: "translateY(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-              <Badge player={rightP} isLeader={currentPlayerId === rightP.id} />
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <div ref={(el) => { badgeRefs.current.right = el; }}>
+                <Badge player={rightP} isLeader={currentPlayerId === rightP.id} />
+              </div>
+              <div ref={(el) => { handSourceRefs.current.right = el; }} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 {rightP.hand.map((_, i) => <CardBack key={i} w={32} h={48} />)}
               </div>
             </div>
@@ -764,7 +909,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
               <div style={{ position: "absolute", left: CW, top: CH, width: CW + 18, height: CH + 18, borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }} />
               <div style={{ position: "absolute", left: "50%", top: 0, transform: "translateX(-50%)" }}>
                 {topP && (
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                  <div ref={(el) => { trickSlotRefs.current.top = el; }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
                     <CardSlot card={playedBy(topP.id)} w={CW} h={CH} />
                     {playedBy(topP.id) && <span style={{ fontSize: 10, color: "rgba(226,232,240,0.78)" }}>{topP.name}</span>}
                   </div>
@@ -772,7 +917,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
               </div>
               <div style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)" }}>
                 {leftP && (
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                  <div ref={(el) => { trickSlotRefs.current.left = el; }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
                     <CardSlot card={playedBy(leftP.id)} w={CW} h={CH} />
                     {playedBy(leftP.id) && <span style={{ fontSize: 10, color: "rgba(226,232,240,0.78)" }}>{leftP.name}</span>}
                   </div>
@@ -780,7 +925,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
               </div>
               <div style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)" }}>
                 {rightP && (
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                  <div ref={(el) => { trickSlotRefs.current.right = el; }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
                     <CardSlot card={playedBy(rightP.id)} w={CW} h={CH} />
                     {playedBy(rightP.id) && <span style={{ fontSize: 10, color: "rgba(226,232,240,0.78)" }}>{rightP.name}</span>}
                   </div>
@@ -788,7 +933,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
               </div>
               <div ref={bottomTrickTargetRef} style={{ position: "absolute", left: "50%", bottom: 0, transform: "translateX(-50%)" }}>
                 {botP && (
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                  <div ref={(el) => { trickSlotRefs.current.bottom = el; }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
                     <CardSlot card={playedBy(botP.id)} w={CW} h={CH} />
                     {playedBy(botP.id) && <span style={{ fontSize: 10, color: "rgba(226,232,240,0.78)" }}>{botP.name}</span>}
                   </div>
@@ -806,7 +951,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
         </div>
 
         {/* HUMAN HAND */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 10, padding: "4px 0 8px", alignItems: "flex-end" }}>
+        <div ref={(el) => { handSourceRefs.current.bottom = el; }} style={{ display: "flex", justifyContent: "center", gap: 10, padding: "4px 0 8px", alignItems: "flex-end" }}>
           {botP?.hand.map(card => (
             <button
               key={card.id}
@@ -828,7 +973,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
 
         {/* BOTTOM BAR */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px 6px 80px", background: "rgba(0,0,0,0.28)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-          {botP && <Badge player={botP} isLeader={currentPlayerId === botP.id} />}
+          {botP && <div ref={(el) => { badgeRefs.current.bottom = el; }}><Badge player={botP} isLeader={currentPlayerId === botP.id} /></div>}
           <div style={{ color: "rgba(255,255,255,0.38)", fontSize: 10, textAlign: "right" }}>
             {lastHandResult
               ? `Última mano: ${lastHandResult.winnerName} (+${lastHandResult.points})`
@@ -862,6 +1007,68 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
             filter: "drop-shadow(0 12px 22px rgba(0,0,0,0.55))",
           }}>
           <CardFace card={flyingCard.card} w={flyingCard.from.w} h={flyingCard.from.h} highlight />
+        </div>
+      )}
+
+      {opponentFlyingCards.map((anim) => (
+        <div
+          key={anim.id}
+          style={{
+            position: "fixed",
+            left: anim.from.x,
+            top: anim.from.y,
+            width: anim.from.w,
+            height: anim.from.h,
+            pointerEvents: "none",
+            zIndex: 88,
+            transform: `translate(${anim.active ? anim.delta.x : 0}px, ${anim.active ? anim.delta.y : 0}px) scale(${anim.active ? anim.scaleTo : 1}) rotate(${anim.active ? anim.rotateTo : 0}deg)`,
+            transformOrigin: "center",
+            transition: `transform ${anim.durationMs}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${anim.durationMs}ms ease`,
+            opacity: anim.active ? anim.fadeTo : 1,
+            filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.5))",
+          }}>
+          <CardFace card={anim.card} w={anim.from.w} h={anim.from.h} />
+        </div>
+      ))}
+
+      {trickCollectCards.map((anim) => (
+        <div
+          key={anim.id}
+          style={{
+            position: "fixed",
+            left: anim.from.x,
+            top: anim.from.y,
+            width: anim.from.w,
+            height: anim.from.h,
+            pointerEvents: "none",
+            zIndex: 87,
+            transform: `translate(${anim.active ? anim.delta.x : 0}px, ${anim.active ? anim.delta.y : 0}px) scale(${anim.active ? anim.scaleTo : 1}) rotate(${anim.active ? anim.rotateTo : 0}deg)`,
+            transformOrigin: "center",
+            transition: `transform ${anim.durationMs}ms cubic-bezier(0.2, 0.95, 0.2, 1), opacity ${anim.durationMs}ms ease`,
+            opacity: anim.active ? anim.fadeTo : 1,
+            filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.42))",
+          }}>
+          <CardFace card={anim.card} w={anim.from.w} h={anim.from.h} />
+        </div>
+      ))}
+
+      {trickPointsPop && (
+        <div
+          style={{
+            position: "fixed",
+            left: trickPointsPop.x,
+            top: trickPointsPop.y,
+            zIndex: 95,
+            pointerEvents: "none",
+            transform: `translate(-50%, ${trickPointsPop.active ? "-24px" : "0px"}) scale(${trickPointsPop.active ? 1.08 : 0.92})`,
+            opacity: trickPointsPop.active ? 1 : 0,
+            transition: "transform 460ms cubic-bezier(0.16, 1, 0.3, 1), opacity 460ms ease",
+            color: "#fde68a",
+            fontWeight: 900,
+            fontSize: 28,
+            textShadow: "0 4px 16px rgba(0,0,0,0.45), 0 0 18px rgba(250,204,21,0.35)",
+          }}>
+          {trickPointsPop.text}
         </div>
       )}
 
