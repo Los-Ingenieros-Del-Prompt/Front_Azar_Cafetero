@@ -2,8 +2,8 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { RotateCcw, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import PokerTable from "@/components/brisca/PokerTable";
-import { GameControls } from "@/components/brisca/GameControls";
+import MuteButton from "@/components/common/MuteButton";
+import { useUserContext } from "@/context/UserContext";
 import {
   useBriscaWebSocket,
   CardDTO,
@@ -270,8 +270,9 @@ interface BriscaMultiplayerProps {
 
 export default function BriscaMultiplayer({ gameId: propGameId, userName, userId, mockMode = false }: BriscaMultiplayerProps) {
   const router = useRouter();
-  const [playerId] = useState(()=>userId||`player-${Math.random().toString(36).slice(2,8)}`);
-  const [playerName] = useState(()=>userName||`Jugador${Math.floor(Math.random()*1000)}`);
+  const { user } = useUserContext();
+  const [playerId] = useState(() => userId || user?.userId || `player-${Math.random().toString(36).slice(2, 8)}`);
+  const [playerName] = useState(() => userName || user?.name || `Jugador${Math.floor(Math.random() * 1000)}`);
   const [gameId] = useState(()=>propGameId||"test-game-1");
   const hasJoinedRef = useRef(false);
   const [alerts, setAlerts] = useState<InGameAlert[]>([]);
@@ -308,7 +309,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
     if (mockMode) return;
     if (!isConnected||hasJoinedRef.current) return;
     const initGame=async()=>{
-      try { await createGame(gameId,2,4); } catch(e) { console.log("[Brisca] Error creating game:",e); }
+      try { await createGame(gameId,2,4,100); } catch(e) { console.log("[Brisca] Error creating game:",e); }
       joinGame(gameId,playerId,playerName);
       hasJoinedRef.current=true;
       setTimeout(()=>{ requestGameState(gameId); },300);

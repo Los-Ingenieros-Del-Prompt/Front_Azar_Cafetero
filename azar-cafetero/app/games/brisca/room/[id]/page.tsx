@@ -15,7 +15,6 @@ export default function BriscaRoomPage({ params }: PageProps) {
   const { user, isLoading } = useUserContext();
   const isLocalDevMock = process.env.NODE_ENV === "development";
 
-  // Auth check
   useEffect(() => {
     if (!isLocalDevMock && !isLoading && !user) {
       router.replace("/");
@@ -30,20 +29,7 @@ export default function BriscaRoomPage({ params }: PageProps) {
     );
   }
 
-  if (isLocalDevMock) {
-    return (
-      <BriscaMultiplayer
-        gameId={id}
-        userName="Local Preview"
-        userId="local-dev-user"
-        mockMode
-      />
-    );
-  }
+  if (!user) return null;
 
-  if (!user) {
-    return null;
-  }
-
-  return <BriscaMultiplayer gameId={id} userName={user.name} userId={user.id} />;
+  return <BriscaMultiplayer gameId={id} userName={user.name} userId={user.userId} />;
 }
