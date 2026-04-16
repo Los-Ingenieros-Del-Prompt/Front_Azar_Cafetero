@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { User, DollarSign, Home, LogOut, ArrowRight, Plus, Loader2, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import MuteButton from "@/components/common/MuteButton";
+import BriscaMultiplayer from "@/components/brisca/BriscaMultiplayer";
 import { useUserContext } from "@/context/UserContext";
 import { useGameWebSocket, TableDTO } from "@/hooks/useGameWebSocket";
 
@@ -34,6 +35,7 @@ const FALLBACK_ROOMS: Room[] = [
 export default function BriscaFloor() {
   const router = useRouter();
   const { user, isLoading: authLoading, logout } = useUserContext();
+  const isLocalDevMock = process.env.NODE_ENV === "development";
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newTableName, setNewTableName] = useState("");
   const [newTableBet, setNewTableBet] = useState(100);
@@ -51,25 +53,28 @@ export default function BriscaFloor() {
 
   // Auth check - redirect if not logged in
   useEffect(() => {
+    if (isLocalDevMock) return;
     if (!authLoading && !user) {
       router.replace("/");
     }
-  }, [user, authLoading, router]);
+  }, [isLocalDevMock, user, authLoading, router]);
 
   // Connect to WebSocket when authenticated
   useEffect(() => {
+    if (isLocalDevMock) return;
     if (user) {
       connect();
     }
-  }, [user, connect]);
+  }, [isLocalDevMock, user, connect]);
 
   // Subscribe to floor updates when connected
   useEffect(() => {
+    if (isLocalDevMock) return;
     if (isConnected && user) {
       subscribeToFloor(BRISCA_FLOOR_ID, user.name);
       fetchTables().catch(console.error);
     }
-  }, [isConnected, user, subscribeToFloor, fetchTables]);
+  }, [isLocalDevMock, isConnected, user, subscribeToFloor, fetchTables]);
 
   const enterRoom = (tableId: string) => {
     router.push(`/games/brisca/room/${tableId}`);
@@ -100,6 +105,17 @@ export default function BriscaFloor() {
       setCreating(false);
     }
   }, [newTableName, newTableBet, creating, createTable, notifyTableCreated]);
+
+  if (isLocalDevMock) {
+    return (
+      <BriscaMultiplayer
+        gameId="local-brisca-preview"
+        userName="Local Preview"
+        userId="local-dev-user"
+        mockMode
+      />
+    );
+  }
 
   // Loading state
   if (authLoading) {

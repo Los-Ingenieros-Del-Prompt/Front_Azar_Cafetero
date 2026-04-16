@@ -13,14 +13,15 @@ export default function BriscaRoomPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
   const { user, isLoading } = useUserContext();
+  const isLocalDevMock = process.env.NODE_ENV === "development";
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLocalDevMock && !isLoading && !user) {
       router.replace("/");
     }
-  }, [user, isLoading, router]);
+  }, [isLocalDevMock, user, isLoading, router]);
 
-  if (isLoading) {
+  if (!isLocalDevMock && isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900">
         <Loader2 className="w-8 h-8 animate-spin text-yellow-500" />

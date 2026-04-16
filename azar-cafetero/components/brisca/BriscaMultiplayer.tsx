@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { RotateCcw, Home, LogOut, User, DollarSign, Loader2 } from "lucide-react";
+import { RotateCcw, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import MuteButton from "@/components/common/MuteButton";
 import { useUserContext } from "@/context/UserContext";
@@ -34,6 +34,16 @@ interface OverlayCardAnimation extends FlyingCardAnimation {
   id: string; rotateTo: number; scaleTo: number; fadeTo: number; durationMs: number;
 }
 interface TrickPointsPop { text: string; x: number; y: number; active: boolean; }
+interface BriscaViewState {
+  players: Player[];
+  trumpCard: Card | null;
+  trumpSuit: Suit | null;
+  remainingCards: number;
+  currentPlayerId: string | null;
+  currentTrick: Record<string, Card>;
+  phase: RoundPhase;
+  winner: { id: string; name: string } | null;
+}
 
 // ============ COLOMBIAN COLOR PALETTE ============
 const COL = {
@@ -181,38 +191,23 @@ const CardBack: React.FC<{ w?: number; h?: number }> = ({ w=80, h=120 }) => (
 );
 
 interface CardFaceProps { card: Card; w?: number; h?: number; highlight?: boolean; }
-const CardFace: React.FC<CardFaceProps> = ({ card, w=80, h=120, highlight=false }) => {
-  const {suit,rank}=card;
-  const isFace=rank>=10;
-  const lbl=rank===10?"S":rank===11?"C":rank===12?"R":String(rank);
-  const ps=rank===1?1.6:rank>=6?0.82:0.9;
-  const dc=SDARK[suit];
+const CardFace: React.FC<CardFaceProps> = ({ card, w = 80, h = 120, highlight = false }) => {
+  const rank = String(card.rank).padStart(2, "0"); // 1 → 01
+  const suit = card.suit.toLowerCase(); // Oros → oros
+
+  const src = `/cards/${rank}-${suit}.png`;
+
   return (
-    <div style={{
-      width:w, height:h, borderRadius:7, overflow:"hidden", flexShrink:0,
-      border:highlight?`3px solid ${COL.amarillo}`:`2px solid rgba(255,209,0,0.5)`,
-      boxShadow:highlight
-        ?`0 0 0 2px rgba(206,17,38,0.4), 0 0 24px rgba(255,209,0,0.7), 0 6px 18px rgba(0,0,0,0.55)`
-        :`0 0 0 1px rgba(255,209,0,0.22), 0 4px 14px rgba(0,0,0,0.45)`,
-      background:"white",
-    }}>
-      <svg viewBox="0 0 60 90" style={{ width:"100%", height:"100%" }}>
-        <rect width="60" height="90" fill="white"/>
-        <rect x="1.5" y="1.5" width="57" height="87" rx="3" fill="none" stroke={dc} strokeWidth="0.3" opacity="0.2"/>
-        <text x="4.5" y="10" fontSize="7.5" fontWeight="bold" fontFamily="Georgia,serif" fill={dc}>{lbl}</text>
-        <g transform="translate(7,18) scale(0.38)"><SuitPip suit={suit}/></g>
-        <g transform="rotate(180,30,45)">
-          <text x="4.5" y="10" fontSize="7.5" fontWeight="bold" fontFamily="Georgia,serif" fill={dc}>{lbl}</text>
-          <g transform="translate(7,18) scale(0.38)"><SuitPip suit={suit}/></g>
-        </g>
-        {isFace
-          ?<FigureSVG suit={suit} rank={rank}/>
-          :(PIP_LAYOUTS[rank]||[]).map(([x,y,fl],i)=>(
-            <g key={i} transform={`translate(${x},${y})`}><SuitPip suit={suit} size={ps} flip={fl}/></g>
-          ))
-        }
-      </svg>
-    </div>
+    <img
+      src={src}
+      style={{
+        width: w,
+        height: h,
+        borderRadius: 8,
+        objectFit: "cover",
+        border: highlight ? "2px solid #FFD100" : undefined,
+      }}
+    />
   );
 };
 
@@ -266,9 +261,14 @@ const Badge: React.FC<BadgeProps> = ({ player, isLeader }) => (
 );
 
 // ============ MAIN COMPONENT ============
-interface BriscaMultiplayerProps { gameId?: string; userName?: string; userId?: string; }
+interface BriscaMultiplayerProps {
+  gameId?: string;
+  userName?: string;
+  userId?: string;
+  mockMode?: boolean;
+}
 
-export default function BriscaMultiplayer({ gameId: propGameId, userName, userId }: BriscaMultiplayerProps) {
+export default function BriscaMultiplayer({ gameId: propGameId, userName, userId, mockMode = false }: BriscaMultiplayerProps) {
   const router = useRouter();
   const { user } = useUserContext();
   const [playerId] = useState(() => userId || user?.userId || `player-${Math.random().toString(36).slice(2, 8)}`);
@@ -300,9 +300,13 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   const { isConnected, connectionStatus, error, gameState, connect, createGame, joinGame, startGame, playCard, requestGameState } =
     useBriscaWebSocket({ onError:(err)=>console.error("[Brisca] Error:",err) });
 
-  useEffect(()=>{ connect(); },[]); // eslint-disable-line
+  useEffect(()=>{
+    if (mockMode) return;
+    connect();
+  },[mockMode, connect]);
 
   useEffect(()=>{
+    if (mockMode) return;
     if (!isConnected||hasJoinedRef.current) return;
     const initGame=async()=>{
       try { await createGame(gameId,2,4,100); } catch(e) { console.log("[Brisca] Error creating game:",e); }
@@ -313,7 +317,89 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
     initGame();
   },[isConnected]); // eslint-disable-line
 
-  const { players, trumpCard, trumpSuit, remainingCards, currentPlayerId, currentTrick, phase, winner } = useMemo(()=>{
+  const mockViewState = useMemo<BriscaViewState>(() => {
+    const meId = playerId;
+    const p2Id = `${gameId}-mock-p2`;
+    const p3Id = `${gameId}-mock-p3`;
+    const p4Id = `${gameId}-mock-p4`;
+
+    const players: Player[] = [
+      {
+        id: meId,
+        name: playerName,
+        hand: [
+          { suit: "Oros", rank: 1, id: "mock-bottom-1" },
+          { suit: "Copas", rank: 12, id: "mock-bottom-2" },
+          { suit: "Espadas", rank: 3, id: "mock-bottom-3" },
+        ],
+        score: 25,
+        pos: "bottom",
+        emoji: PLAYER_EMOJIS[0],
+        clr: PLAYER_COLORS[0],
+        isMe: true,
+      },
+      {
+        id: p2Id,
+        name: "Mock Zeus",
+        hand: [
+          { suit: "Bastos", rank: 7, id: "mock-right-1" },
+          { suit: "Copas", rank: 10, id: "mock-right-2" },
+          { suit: "Espadas", rank: 6, id: "mock-right-3" },
+        ],
+        score: 18,
+        pos: "right",
+        emoji: PLAYER_EMOJIS[1],
+        clr: PLAYER_COLORS[1],
+        isMe: false,
+      },
+      {
+        id: p3Id,
+        name: "Mock Athena",
+        hand: [
+          { suit: "Oros", rank: 7, id: "mock-top-1" },
+          { suit: "Bastos", rank: 11, id: "mock-top-2" },
+          { suit: "Copas", rank: 2, id: "mock-top-3" },
+        ],
+        score: 31,
+        pos: "top",
+        emoji: PLAYER_EMOJIS[2],
+        clr: PLAYER_COLORS[2],
+        isMe: false,
+      },
+      {
+        id: p4Id,
+        name: "Mock Ares",
+        hand: [
+          { suit: "Espadas", rank: 12, id: "mock-left-1" },
+          { suit: "Bastos", rank: 5, id: "mock-left-2" },
+          { suit: "Oros", rank: 10, id: "mock-left-3" },
+        ],
+        score: 12,
+        pos: "left",
+        emoji: PLAYER_EMOJIS[3],
+        clr: PLAYER_COLORS[3],
+        isMe: false,
+      },
+    ];
+
+    return {
+      players,
+      trumpCard: { suit: "Bastos", rank: 1, id: "mock-trump" },
+      trumpSuit: "Bastos",
+      remainingCards: 16,
+      currentPlayerId: meId,
+      currentTrick: {
+        [p2Id]: { suit: "Copas", rank: 11, id: "mock-trick-right" },
+        [p3Id]: { suit: "Oros", rank: 3, id: "mock-trick-top" },
+      },
+      phase: "playing",
+      winner: null,
+    };
+  }, [gameId, playerId, playerName]);
+
+  const viewState = useMemo<BriscaViewState>(() => {
+    if (mockMode) return mockViewState;
+
     if (!gameState) return { players:[],trumpCard:null,trumpSuit:null,remainingCards:0,currentPlayerId:null,currentTrick:{},phase:"waiting" as const,winner:null };
     const myIndex=gameState.players.findIndex(p=>p.id===playerId);
     const playerCount=gameState.players.length;
@@ -331,7 +417,9 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
     const phase: RoundPhase=gameState.state==="WAITING_FOR_PLAYERS"?"waiting":gameState.state==="IN_PROGRESS"?"playing":"finished";
     const winner=gameState.winner?{ id:gameState.winner.id,name:gameState.winner.name }:null;
     return { players,trumpCard,trumpSuit,remainingCards:gameState.remainingCards,currentPlayerId:gameState.currentPlayerId,currentTrick,phase,winner };
-  },[gameState,playerId]);
+  },[mockMode, mockViewState, gameState, playerId]);
+
+  const { players, trumpCard, trumpSuit, remainingCards, currentPlayerId, currentTrick, phase, winner } = viewState;
 
   const isMyTurn=currentPlayerId===playerId;
   const canStart=phase==="waiting"&&players.length>=2;
@@ -346,9 +434,10 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   },[]);
 
   const handlePlayCard=useCallback((card:Card)=>{
+    if (mockMode) return;
     if (!isMyTurn||phase!=="playing") return;
     playCard(gameId,playerId,REVERSE_SUIT_MAP[card.suit],REVERSE_RANK_MAP[card.rank]);
-  },[isMyTurn,phase,gameId,playerId,playCard]);
+  },[mockMode, isMyTurn, phase, gameId, playerId, playCard]);
 
   const handleAnimatedPlayCard=useCallback((card:Card,sourceEl:HTMLElement)=>{
     if (!isMyTurn||phase!=="playing"||isAnimatingPlay) return;
@@ -367,7 +456,10 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
     },430);
   },[isMyTurn,phase,isAnimatingPlay,handlePlayCard]);
 
-  const handleStartGame=useCallback(()=>{ startGame(gameId); },[gameId,startGame]);
+  const handleStartGame=useCallback(()=>{
+    if (mockMode) return;
+    startGame(gameId);
+  },[mockMode, gameId, startGame]);
 
   const byPos=(pos:Pos):Player|undefined=>players.find(p=>p.pos===pos);
   const playedBy=(pid:string):Card|undefined=>currentTrick[pid];
@@ -440,51 +532,8 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
     animationTimeoutsRef.current=[];
   },[]);
 
-  // ============ BACKGROUND — jungle + flag energy ============
-  const BG = () => (
-    <div style={{ position:"absolute",inset:0,zIndex:0,overflow:"hidden" }}>
-      <div style={{ position:"absolute",inset:0,background:`linear-gradient(160deg, #001800 0%, #0d3d10 35%, #003d1a 65%, #001800 100%)` }}/>
-      <div style={{ position:"absolute",inset:0,backgroundImage:`url('/images/backgroundbrisca.jpg')`,backgroundSize:"cover",backgroundPosition:"center 30%",opacity:0.2,filter:"saturate(3) hue-rotate(85deg) brightness(0.7)" }}/>
-      {/* Colombian flag diagonal streaks */}
-      <div style={{ position:"absolute",inset:0,background:`linear-gradient(125deg, rgba(255,209,0,0.22) 0%, rgba(255,209,0,0.04) 22%, rgba(0,48,135,0.14) 44%, rgba(206,17,38,0.2) 68%, rgba(206,17,38,0.06) 100%)` }}/>
-      <div style={{ position:"absolute",inset:0,background:`radial-gradient(ellipse 65% 55% at 50% 50%, rgba(255,180,0,0.16) 0%, transparent 60%)` }}/>
-      <div style={{ position:"absolute",inset:0,background:`radial-gradient(ellipse 100% 100% at 50% 50%, transparent 40%, rgba(0,8,0,0.88) 100%)` }}/>
-      <div style={{ position:"absolute",inset:0,background:`linear-gradient(180deg, rgba(0,0,0,0.75) 0%, transparent 16%, transparent 84%, rgba(0,0,0,0.85) 100%)` }}/>
-      {/* Floating orbs */}
-      <div style={{ position:"absolute",width:320,height:320,borderRadius:"50%",top:"-10%",left:"-5%",background:`radial-gradient(circle, rgba(255,209,0,0.12), transparent 70%)`,filter:"blur(40px)",pointerEvents:"none" }}/>
-      <div style={{ position:"absolute",width:280,height:280,borderRadius:"50%",bottom:"-8%",right:"-4%",background:`radial-gradient(circle, rgba(206,17,38,0.15), transparent 70%)`,filter:"blur(36px)",pointerEvents:"none" }}/>
-      <div style={{ position:"absolute",width:240,height:240,borderRadius:"50%",top:"30%",right:"8%",background:`radial-gradient(circle, rgba(0,48,135,0.18), transparent 70%)`,filter:"blur(32px)",pointerEvents:"none" }}/>
-    </div>
-  );
+  // ============ BACKGROUND — poker felt ============
 
-  // Colombian sidebar
-  const Sidebar = () => (
-    <nav style={{
-      position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",
-      zIndex:20,display:"flex",flexDirection:"column",gap:6,padding:"14px 9px",
-      background:`linear-gradient(180deg, rgba(0,48,135,0.94), rgba(0,24,60,0.90))`,
-      backdropFilter:"blur(14px)",borderRadius:14,
-      border:`2.5px solid ${COL.amarillo}`,
-      borderLeft:`5px solid ${COL.amarillo}`,
-      boxShadow:`0 0 30px rgba(255,209,0,0.2), 0 0 0 1px rgba(206,17,38,0.25), 0 8px 28px rgba(0,0,0,0.7)`,
-    }}>
-      {[{icon:<User size={18}/>,onClick:undefined},{icon:<DollarSign size={18}/>,onClick:undefined},{icon:<Home size={18}/>,onClick:()=>router.push("/lobby")}].map((btn,i)=>(
-        <button key={i} onClick={btn.onClick} style={{ padding:"9px",background:"rgba(255,209,0,0.1)",border:`1px solid rgba(255,209,0,0.4)`,borderRadius:9,color:COL.amarillo,cursor:"pointer",transition:"all 0.2s",display:"flex",alignItems:"center",justifyContent:"center" }}
-          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,209,0,0.3)";(e.currentTarget as HTMLElement).style.boxShadow=`0 0 12px rgba(255,209,0,0.4)`;}}
-          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,209,0,0.1)";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
-          {btn.icon}
-        </button>
-      ))}
-      <div style={{ height:1,background:`linear-gradient(90deg, ${COL.amarillo}, ${COL.rojo})`,margin:"2px 0",borderRadius:1 }}/>
-      <MuteButton variant="sidebar"/>
-      <div style={{ height:1,background:`linear-gradient(90deg, ${COL.amarillo}, ${COL.rojo})`,margin:"2px 0",borderRadius:1 }}/>
-      <button onClick={()=>router.push("/")} title="Salir" style={{ padding:"9px",background:"rgba(206,17,38,0.15)",border:`1px solid rgba(206,17,38,0.5)`,borderRadius:9,color:COL.rojo,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}
-        onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(206,17,38,0.4)";(e.currentTarget as HTMLElement).style.boxShadow=`0 0 12px rgba(206,17,38,0.5)`;}}
-        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(206,17,38,0.15)";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
-        <LogOut size={18}/>
-      </button>
-    </nav>
-  );
 
   const FlagStripe = ({ h=6 }: { h?: number }) => (
     <div style={{ display:"flex",height:h,borderRadius:h/2,overflow:"hidden" }}>
@@ -500,10 +549,10 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
     maxWidth:460,
   };
 
-  if (connectionStatus!=="connected") {
+  if (!mockMode && connectionStatus!=="connected") {
     return (
       <div style={{ position:"relative",minHeight:"100vh",width:"100%",color:"white",overflow:"hidden",background:"#001800" }}>
-        <BG/>
+        <PokerTable/>
         <div style={{ position:"relative",zIndex:10,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center" }}>
           <div style={modalBox}>
             <FlagStripe h={8}/>
@@ -523,7 +572,8 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   if (phase==="waiting") {
     return (
       <div style={{ position:"relative",minHeight:"100vh",width:"100%",color:"white",overflow:"hidden",background:"#001800" }}>
-        <BG/><Sidebar/>
+        <PokerTable/>
+        <GameControls onMenu={() => router.push("/lobby")} onExit={() => router.push("/")} />
         <div style={{ position:"relative",zIndex:10,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Georgia,serif" }}>
           <div style={modalBox}>
             <FlagStripe h={8}/>
@@ -574,7 +624,8 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
     const totalPoints=sortedPlayers.reduce((sum,p)=>sum+p.score,0);
     return (
       <div style={{ position:"relative",minHeight:"100vh",width:"100%",color:"white",overflow:"hidden",background:"#001800" }}>
-        <BG/><Sidebar/>
+        <PokerTable/>
+        <GameControls onMenu={() => router.push("/lobby")} onExit={() => router.push("/")} />
         <div style={{ position:"relative",zIndex:10,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Georgia,serif" }}>
           <div style={{ ...modalBox,maxWidth:500 }}>
             <FlagStripe h={8}/>
@@ -614,8 +665,8 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
 
   return (
     <div style={{ position:"relative",width:"100%",color:"white",overflow:"hidden",height:"100vh",display:"flex",flexDirection:"column",userSelect:"none",fontFamily:"sans-serif",background:"#001800" }}>
-      <BG/>
-      <Sidebar/>
+      <PokerTable/>
+      <GameControls onMenu={() => router.push("/lobby")} onExit={() => router.push("/")} />
       <div style={{ position:"relative",zIndex:10,display:"flex",flexDirection:"column",height:"100%",overflow:"hidden" }}>
 
         {/* TOP PLAYER */}
