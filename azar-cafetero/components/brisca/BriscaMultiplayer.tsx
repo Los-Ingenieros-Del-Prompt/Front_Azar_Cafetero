@@ -4,6 +4,8 @@ import { RotateCcw, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import MuteButton from "@/components/common/MuteButton";
 import { useUserContext } from "@/context/UserContext";
+import PokerTable from "@/components/brisca/PokerTable";
+import { GameControls } from "@/components/brisca/GameControls";
 import {
   useBriscaWebSocket,
   CardDTO,
