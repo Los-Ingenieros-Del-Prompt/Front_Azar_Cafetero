@@ -1,91 +1,89 @@
 "use client";
-import { useEffect, useState } from "react";
-import { User, DollarSign, Home, LogOut, ArrowRight, Plus, X } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { User, DollarSign, Home, LogOut, Plus, Loader2, Users, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import MuteButton from "@/components/common/MuteButton";
-import { fetchGameRooms, createTable, type GameRoom } from "@/lib/gameTablesApi";
+import { useUserContext } from "@/context/UserContext";
+import { useGameWebSocket, TableDTO } from "@/hooks/useGameWebSocket";
 
-type Room = {
-  id: string;
-  name: string;
-  players: number;
-  max: number;
-};
-
-const MAX_PLAYERS = 10;
-const FALLBACK_ROOMS: Room[] = [
-  { id: "3", name: "Sala 3", players: 8, max: MAX_PLAYERS },
-  { id: "2", name: "Sala 2", players: 2, max: MAX_PLAYERS },
-  { id: "1", name: "Sala 1", players: 5, max: MAX_PLAYERS },
-];
+const PARQUES_FLOOR_ID = "00000000-0000-0000-0000-000000000001";
+const MAX_PLAYERS = 4;
 
 export default function ParquesFloor() {
   const router = useRouter();
-  const [rooms, setRooms] = useState<Room[]>(FALLBACK_ROOMS);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [tableName, setTableName] = useState("");
-  const [requiredBet, setRequiredBet] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
-  const [error, setError] = useState("");
+  const { user, isLoading: authLoading, logout } = useUserContext();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newTableName, setNewTableName] = useState("");
+  const [newTableBet, setNewTableBet] = useState(100);
+  const [creating, setCreating] = useState(false);
+
+  const {
+    isConnected,
+    tables,
+    connect,
+    fetchTables,
+    createTable,
+    notifyTableCreated,
+    subscribeToFloor,
+  } = useGameWebSocket();
 
   useEffect(() => {
-    fetchGameRooms()
-      .then((tables: GameRoom[]) => {
-        if (!tables.length) {
-          setRooms(FALLBACK_ROOMS);
-          return;
-        }
-        setRooms(
-          tables.map((table) => ({
-            id: table.id,
-            name: table.name,
-            players: table.players,
-            max: MAX_PLAYERS,
-          }))
-        );
-      })
-      .catch(() => {
-        setRooms(FALLBACK_ROOMS);
-      });
-  }, []);
-
-  const handleCreateTable = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    if (!tableName.trim()) {
-      setError("El nombre de la mesa es requerido");
-      return;
+    if (!authLoading && !user) {
+      router.replace("/");
     }
+  }, [user, authLoading, router]);
 
-    if (!requiredBet || isNaN(Number(requiredBet)) || Number(requiredBet) <= 0) {
-      setError("La apuesta requerida debe ser un número mayor a 0");
-      return;
+  useEffect(() => {
+    if (user) connect();
+  }, [user, connect]);
+
+  useEffect(() => {
+    if (isConnected && user) {
+      subscribeToFloor(PARQUES_FLOOR_ID, user.name);
+      fetchTables().catch(console.error);
     }
+  }, [isConnected, user, subscribeToFloor, fetchTables]);
 
-    setIsCreating(true);
+  const enterRoom = (tableId: string) => {
+    router.push(`/games/parques/room/${tableId}`);
+  };
 
+  const handleCreateTable = useCallback(async () => {
+    if (!newTableName.trim() || creating) return;
+    setCreating(true);
     try {
-      const newRoom = await createTable(tableName.trim(), Number(requiredBet));
-      setRooms([...rooms, { ...newRoom, max: MAX_PLAYERS }]);
-      setIsModalOpen(false);
-      setTableName("");
-      setRequiredBet("");
-    } catch (err) {
-      setError("Error al crear la mesa. Intenta de nuevo.");
-      console.error(err);
+      const table = await createTable(newTableName, newTableBet, MAX_PLAYERS);
+      notifyTableCreated(PARQUES_FLOOR_ID, {
+        tableId: table.tableId,
+        tableName: table.tableName,
+        maxPlayers: MAX_PLAYERS,
+        requiredBet: table.requiredBet,
+      });
+      setShowCreateModal(false);
+      setNewTableName("");
+      setNewTableBet(100);
+      enterRoom(table.tableId);
+    } catch (error) {
+      console.error("Failed to create table:", error);
+      alert("Error al crear la sala");
     } finally {
-      setIsCreating(false);
+      setCreating(false);
     }
-  };
+  }, [newTableName, newTableBet, creating, createTable, notifyTableCreated]);
 
-  const enterRoom = (id: string) => {
-    router.push(`/parques/room/${id}`);
-  };
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+      </div>
+    );
+  }
+
+  if (!user) return null;
 
   return (
     <div className="relative min-h-screen w-full font-sans text-white overflow-hidden bg-slate-900">
-      {/* background */}
+      {/* Background */}
       <div
         className="absolute inset-0 z-0 bg-cover bg-no-repeat"
         style={{
@@ -97,59 +95,76 @@ export default function ParquesFloor() {
         }}
       />
 
-      {/* sidebar */}
+      {/* Sidebar */}
       <nav className="absolute left-6 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-8 p-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full shadow-2xl">
-        <button className="p-2 hover:bg-white/20 rounded-full"><User size={24} /></button>
+        <button className="p-2 hover:bg-white/20 rounded-full" title={user.name}><User size={24} /></button>
         <button className="p-2 hover:bg-white/20 rounded-full"><DollarSign size={24} /></button>
         <button onClick={() => router.push("/lobby")} className="p-2 hover:bg-white/20 rounded-full"><Home size={24} /></button>
         <div className="h-px bg-white/20 w-8 self-center my-2" />
         <MuteButton variant="sidebar" />
         <div className="h-px bg-white/20 w-8 self-center my-2" />
-        <button className="p-2 hover:bg-white/20 rounded-full text-red-400"><LogOut size={24} /></button>
+        <button onClick={logout} className="p-2 hover:bg-white/20 rounded-full text-red-400" title="Salir"><LogOut size={24} /></button>
       </nav>
 
-      {/* main */}
+      {/* Main */}
       <main className="relative z-10 container mx-auto px-12 py-16 flex flex-col items-end min-h-screen">
-        <header className="text-right mb-16 max-w-2xl">
+        <header className="text-right mb-8 max-w-2xl">
+          <p className="text-sm text-emerald-400/80 mb-2">Hola, {user.name}</p>
           <h2 className="text-3xl font-light mb-2">Como en casa,</h2>
           <h2 className="text-4xl font-semibold mb-4">pero con más emoción.</h2>
           <h1 className="text-7xl font-bold tracking-tight">Elige Tu Sala</h1>
         </header>
 
+        {/* Connection status */}
+        <div className="mb-6 flex items-center gap-2 text-sm">
+          <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`} />
+          <span className="text-white/60">{isConnected ? "Conectado" : "Conectando..."}</span>
+        </div>
+
+        {/* Create button */}
         <button
-          onClick={() => setIsModalOpen(true)}
-          className="mb-8 flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition shadow-lg"
+          onClick={() => setShowCreateModal(true)}
+          className="mb-8 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-xl transition shadow-lg"
         >
           <Plus size={20} />
-          Crear Nueva Mesa
+          Crear Nueva Sala
         </button>
 
+        {/* Tables grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
-          {rooms.map((room) => (
+          {tables.length === 0 && (
+            <div className="col-span-full text-center text-white/50 py-12">
+              <Users size={48} className="mx-auto mb-4 opacity-50" />
+              <p>No hay salas disponibles</p>
+              <p className="text-sm">¡Crea una nueva sala para empezar!</p>
+            </div>
+          )}
+          {tables.map((table) => (
             <div
-              key={room.id}
+              key={table.tableId}
               className="group relative cursor-pointer rounded-2xl border border-white/20 bg-white/10 p-6 backdrop-blur-xl shadow-xl transition hover:-translate-y-1 hover:bg-white/15"
-              onClick={() => enterRoom(room.id)}
+              onClick={() => enterRoom(table.tableId)}
             >
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-2xl font-bold tracking-tight">{room.name}</h3>
+                  <h3 className="text-2xl font-bold tracking-tight">{table.tableName}</h3>
                   <p className="text-sm text-white/70">Sala de Parqués</p>
+                  <p className="text-xs text-emerald-400 mt-1">${table.requiredBet} apuesta</p>
                 </div>
                 <span
                   className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                    room.players > 7
+                    table.playerCount >= (table.maxPlayers || MAX_PLAYERS)
                       ? "bg-red-500/20 text-red-200 border border-red-400/40"
                       : "bg-emerald-500/20 text-emerald-200 border border-emerald-400/40"
                   }`}
                 >
-                  {room.players}/{room.max} jugadores
+                  {table.playerCount}/{table.maxPlayers || MAX_PLAYERS} jugadores
                 </span>
               </div>
 
               <div className="h-px w-full bg-white/15" />
 
-              <button className="mt-5 flex w-full items-center justify-between rounded-xl bg-green-800/90 px-4 py-3 text-sm font-semibold text-white shadow-lg transition group-hover:bg-green-700">
+              <button className="mt-5 flex w-full items-center justify-between rounded-xl bg-emerald-800/90 px-4 py-3 text-sm font-semibold text-white shadow-lg transition group-hover:bg-emerald-700">
                 Entrar a la sala
                 <ArrowRight size={18} />
               </button>
@@ -158,92 +173,63 @@ export default function ParquesFloor() {
         </div>
       </main>
 
-      {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-slate-800 rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-white">Crear Nueva Mesa</h2>
-              <button
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setError("");
-                  setTableName("");
-                  setRequiredBet("");
-                }}
-                className="text-gray-400 hover:text-white transition"
-              >
-                <X size={24} />
-              </button>
-            </div>
+      {/* Create Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-slate-800 border border-emerald-500/30 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <h2 className="text-2xl font-bold text-emerald-400 mb-6">Crear Nueva Sala</h2>
 
-            <form onSubmit={handleCreateTable} className="space-y-4">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-200 mb-2">
-                  Nombre de la Mesa
-                </label>
+                <label className="block text-sm text-white/70 mb-2">Nombre de la Sala</label>
                 <input
                   type="text"
-                  value={tableName}
-                  onChange={(e) => setTableName(e.target.value)}
-                  placeholder="Ej: Mesa VIP"
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
-                  disabled={isCreating}
+                  value={newTableName}
+                  onChange={(e) => setNewTableName(e.target.value)}
+                  placeholder="Mi Sala de Parqués"
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:border-emerald-500 focus:outline-none"
+                  maxLength={20}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-200 mb-2">
-                  Apuesta Requerida
-                </label>
-                <input
-                  type="number"
-                  value={requiredBet}
-                  onChange={(e) => setRequiredBet(e.target.value)}
-                  placeholder="Ej: 50.0"
-                  step="0.01"
-                  min="0"
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
-                  disabled={isCreating}
-                />
-              </div>
-
-              {error && (
-                <div className="p-3 bg-red-500/20 border border-red-500 rounded text-red-200 text-sm">
-                  {error}
-                </div>
-              )}
-
-              <div className="flex gap-4 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setError("");
-                    setTableName("");
-                    setRequiredBet("");
-                  }}
-                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-lg transition"
-                  disabled={isCreating}
+                <label className="block text-sm text-white/70 mb-2">Apuesta Mínima</label>
+                <select
+                  value={newTableBet}
+                  onChange={(e) => setNewTableBet(Number(e.target.value))}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:border-emerald-500 focus:outline-none"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  disabled={isCreating}
-                >
-                  {isCreating ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Creando...
-                    </>
-                  ) : (
-                    "Crear Mesa"
-                  )}
-                </button>
+                  <option value={50}>$50</option>
+                  <option value={100}>$100</option>
+                  <option value={250}>$250</option>
+                  <option value={500}>$500</option>
+                  <option value={1000}>$1,000</option>
+                </select>
               </div>
-            </form>
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 rounded-lg transition"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateTable}
+                disabled={!newTableName.trim() || creating}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition flex items-center justify-center gap-2"
+              >
+                {creating ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Creando...
+                  </>
+                ) : (
+                  "Crear Sala"
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
