@@ -1,41 +1,26 @@
 "use client";
 
-import { useMemo } from "react";
-import { useParams } from "next/navigation";
-import TableWaitingRoom from "@/components/lobby/TableWaitingRoom";
-import { useUserContext } from "@/context/UserContext";
+import { useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 
-export default function ParquesRoomPage() {
+export default function ParquesRoomRedirect() {
+  const router = useRouter();
   const params = useParams<{ id: string }>();
-  const { user } = useUserContext();
   const tableId = params.id;
 
-  const players = useMemo(
-    () => [
-      {
-        id: "host",
-        name: user?.name ?? "Capitán Costeño",
-        avatar: "🪇",
-        isHost: true,
-      },
-      { id: "guest-1", name: "La Rola", avatar: "🎀" },
-      { id: "guest-2", name: "El Caleño", avatar: "🕺" },
-      { id: "guest-3", name: "La Santandereana", avatar: "🌶️" },
-    ],
-    [user?.name]
-  );
+  useEffect(() => {
+    if (tableId) {
+      router.replace(`/games/parques/room/${tableId}`);
+    }
+  }, [tableId, router]);
 
   return (
-    <TableWaitingRoom
-      gameLabel="Parqués"
-      tableId={tableId}
-      tableName={`Sala Parqués #${tableId}`}
-      minPlayers={2}
-      maxPlayers={10}
-      players={players}
-      accentClass="border-emerald-300/45 bg-emerald-500/15 text-emerald-100"
-      bgImage="/images/backgroundparques.jpg"
-      roomRoutePrefix="parques"
-    />
+    <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+      <div className="text-center">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mx-auto mb-3" />
+        <p className="text-sm text-white/70">Entrando a la sala...</p>
+      </div>
+    </div>
   );
 }
