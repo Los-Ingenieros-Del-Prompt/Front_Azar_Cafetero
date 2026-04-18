@@ -40,7 +40,7 @@ export default function ParquesBoard() {
                   preserveAspectRatio="xMidYMid slice"
                 >
                   <image
-                    href="/images/parques-board.png"
+                    href="/images/parques-board.svg"
                     width="1000"
                     height="1000"
                   />
