@@ -31,6 +31,7 @@ jobs:
             NEXT_PUBLIC_GAME_WS_URL=${{ secrets.NEXT_PUBLIC_GAME_WS_URL }}
             NEXT_PUBLIC_GAME_API_URL=${{ secrets.NEXT_PUBLIC_GAME_API_URL }}
             NEXT_PUBLIC_PARQUES_WS_URL=${{ secrets.NEXT_PUBLIC_PARQUES_WS_URL }}
+            NEXT_PUBLIC_USER_URL=${{ secrets.NEXT_PUBLIC_USER_URL }}
 
       - name: Deploy en EC2
         uses: appleboy/ssh-action@v1
