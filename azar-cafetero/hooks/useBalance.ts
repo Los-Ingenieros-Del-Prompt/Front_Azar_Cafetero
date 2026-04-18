@@ -10,6 +10,9 @@ import {
 
 const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
 
+// Monto del bono diario — debe coincidir con Balance.DAILY_BONUS en el backend
+const DAILY_BONUS_AMOUNT = 100;
+
 export interface UseBalanceReturn {
   amount: number | null;
   canReceiveBonus: boolean;
@@ -19,27 +22,36 @@ export interface UseBalanceReturn {
   error: string | null;
   claimBonus: () => Promise<void>;
   claimingBonus: boolean;
+  /** Fuerza recarga del saldo desde el servidor (útil al terminar una partida) */
+  refreshBalance: () => Promise<void>;
 }
 
 export function useBalance(): UseBalanceReturn {
-  const [data, setData]               = useState<BalanceData | null>(null);
-  const [loading, setLoading]         = useState(true);
-  const [error, setError]             = useState<string | null>(null);
-  const [diff, setDiff]               = useState<string | null>(null);
+  const [data, setData]                   = useState<BalanceData | null>(null);
+  const [loading, setLoading]             = useState(true);
+  const [error, setError]                 = useState<string | null>(null);
+  const [diff, setDiff]                   = useState<string | null>(null);
   const [claimingBonus, setClaimingBonus] = useState(false);
-  const [countdown, setCountdown]     = useState<string | null>(null);
-  const diffTimerRef                  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [countdown, setCountdown]         = useState<string | null>(null);
+  const diffTimerRef                      = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    getBalance()
-      .then((d) => {
-        setData(d);
-        setCountdown(timeUntilNextBonus(d.nextBonusAt));
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+  const loadBalance = useCallback(async () => {
+    try {
+      const d = await getBalance();
+      setData(d);
+      setCountdown(timeUntilNextBonus(d.nextBonusAt));
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Error al cargar saldo";
+      setError(msg);
+    }
   }, []);
 
+  // Carga inicial
+  useEffect(() => {
+    loadBalance().finally(() => setLoading(false));
+  }, [loadBalance]);
+
+  // Countdown del bono
   useEffect(() => {
     if (!data?.nextBonusAt) return;
     const interval = setInterval(() => {
@@ -48,6 +60,7 @@ export function useBalance(): UseBalanceReturn {
     return () => clearInterval(interval);
   }, [data?.nextBonusAt]);
 
+  // SSE: actualizaciones en tiempo real desde el backend
   useEffect(() => {
     if (loading) return;
 
@@ -77,13 +90,24 @@ export function useBalance(): UseBalanceReturn {
     };
   }, [loading]);
 
+  /**
+   * Reclama el bono diario.
+   * Actualiza el saldo de forma optimista (+100) sin esperar al SSE,
+   * para que la UI responda de inmediato aunque la conexión SSE tarde.
+   */
   const claimBonus = useCallback(async () => {
     setClaimingBonus(true);
     try {
       await claimDailyBonus();
-      setData((prev) =>
-        prev ? { ...prev, canReceiveBonus: false } : prev
-      );
+      // Actualización optimista: suma el bono al saldo local
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          amount: prev.amount + DAILY_BONUS_AMOUNT,
+          canReceiveBonus: false,
+        };
+      });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Error al reclamar bono";
       setError(msg);
@@ -101,5 +125,6 @@ export function useBalance(): UseBalanceReturn {
     error,
     claimBonus,
     claimingBonus,
+    refreshBalance:     loadBalance,
   };
 }
