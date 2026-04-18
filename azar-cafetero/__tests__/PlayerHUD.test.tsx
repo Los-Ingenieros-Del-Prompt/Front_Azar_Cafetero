@@ -1,211 +1,167 @@
-/**
- * PlayerHUD + usePlayerHUD — integration tests
- *
- * Covers:
- *   1. Avatar and balance visible within 1 second of mount (PBI criterion)
- *   2. Balance updates in real time on visibilitychange (no page reload)
- *   3. Zero-balance CTA banner appears with correct button
- */
-
 import "@testing-library/jest-dom";
 import React from "react";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import PlayerHUD from "@/components/lobby/PlayerHUD";
 
-// ─── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockPush = jest.fn();
+const mockLogout = jest.fn();
+
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, replace: jest.fn() }),
 }));
 
-// Mock getToken so authHeaders() returns a header
-jest.mock("@/lib/auth", () => ({
-  getToken: () => "mock-jwt-token",
+jest.mock("@/context/UserContext", () => ({
+  useUserContext: () => ({ logout: mockLogout }),
 }));
 
-// ─── Fetch helpers ────────────────────────────────────────────────────────────
-
-function mockIdentityFetch(identity: { name: string; avatar: string; balance: number }) {
-  global.fetch = jest.fn().mockResolvedValue({
-    ok: true,
-    json: async () => identity,
-  } as Response);
+class MockEventSource {
+  addEventListener = jest.fn();
+  close = jest.fn();
+  onerror: ((this: EventSource, ev: Event) => unknown) | null = null;
 }
 
-function mockIdentityThenBalance(
-  identity: { name: string; avatar: string; balance: number },
-  refreshedBalance: number
-) {
-  let callCount = 0;
-  global.fetch = jest.fn().mockImplementation(() => {
-    callCount++;
-    const balance = callCount === 1 ? identity.balance : refreshedBalance;
-    return Promise.resolve({
-      ok: true,
-      json: async () => ({ ...identity, balance }),
-    } as Response);
+type Identity = { name: string; avatar: string };
+type Balance = {
+  userId: string;
+  amount: number;
+  canReceiveBonus: boolean;
+  nextBonusAt: string | null;
+};
+
+function mockIdentityAndBalance(options: {
+  identity: Identity;
+  balances: Balance[];
+  bonusAmount?: number;
+}) {
+  const { identity, balances, bonusAmount = 100 } = options;
+  let balanceCall = 0;
+
+  global.fetch = jest.fn().mockImplementation(async (input: RequestInfo | URL) => {
+    const url = String(input);
+
+    if (url.endsWith("/api/player/identity")) {
+      return {
+        ok: true,
+        json: async () => identity,
+      } as Response;
+    }
+
+    if (url.endsWith("/player/balance")) {
+      const current = balances[Math.min(balanceCall, balances.length - 1)];
+      balanceCall++;
+      return {
+        ok: true,
+        json: async () => current,
+      } as Response;
+    }
+
+    if (url.endsWith("/player/bonus")) {
+      return {
+        ok: true,
+        json: async () => ({ message: "ok", amount: bonusAmount, transactionId: "tx-1" }),
+      } as Response;
+    }
+
+    return {
+      ok: false,
+      status: 404,
+      json: async () => ({ error: "not-found" }),
+    } as Response;
   });
 }
-
-// ─── Setup ────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
   jest.clearAllMocks();
-  process.env.NEXT_PUBLIC_LOBBY_URL = "http://localhost:8081/";
+  process.env.NEXT_PUBLIC_GATEWAY_URL = "http://localhost:8080";
+  (global as typeof globalThis & { EventSource: typeof EventSource }).EventSource =
+    MockEventSource as unknown as typeof EventSource;
 });
 
 afterEach(() => {
-  delete process.env.NEXT_PUBLIC_LOBBY_URL;
+  delete process.env.NEXT_PUBLIC_GATEWAY_URL;
 });
 
-// ─── Tests ────────────────────────────────────────────────────────────────────
-
 describe("PlayerHUD", () => {
-  describe("Rendering — avatar y saldo visibles al entrar al lobby", () => {
-    test("shows player name after loading", async () => {
-      mockIdentityFetch({ name: "Ana Torres", avatar: "https://cdn.example.com/avatar.jpg", balance: 500 });
-
-      render(<PlayerHUD />);
-
-      await waitFor(() =>
-        expect(screen.getByText("Ana Torres")).toBeInTheDocument()
-      );
+  test("shows player name, avatar and balance after loading", async () => {
+    const avatarUrl = "https://cdn.example.com/avatar.jpg";
+    mockIdentityAndBalance({
+      identity: { name: "Ana Torres", avatar: avatarUrl },
+      balances: [{ userId: "u1", amount: 750, canReceiveBonus: true, nextBonusAt: null }],
     });
 
-    test("shows avatar image when avatar is a URL", async () => {
-      const avatarUrl = "https://cdn.example.com/avatar.jpg";
-      mockIdentityFetch({ name: "Ana Torres", avatar: avatarUrl, balance: 500 });
+    render(<PlayerHUD />);
 
-      render(<PlayerHUD />);
+    await waitFor(() => expect(screen.getByText("Ana Torres")).toBeInTheDocument());
 
-      await waitFor(() => {
-        const img = screen.getByRole("img", { name: /Ana Torres/i });
-        expect(img).toBeInTheDocument();
-        expect(img).toHaveAttribute("src", avatarUrl);
-      });
-    });
-
-    test("shows balance amount after loading", async () => {
-      mockIdentityFetch({ name: "Ana Torres", avatar: "https://cdn.example.com/avatar.jpg", balance: 750 });
-
-      render(<PlayerHUD />);
-
-      await waitFor(() =>
-        expect(screen.getByText(/750/)).toBeInTheDocument()
-      );
-    });
-
-    test("avatar and balance are visible within 1 second of mount (PBI criterion)", async () => {
-      mockIdentityFetch({ name: "Carlos López", avatar: "https://cdn.example.com/avatar2.jpg", balance: 320 });
-
-      const start = performance.now();
-      render(<PlayerHUD />);
-
-      await waitFor(() =>
-        expect(screen.getByText("Carlos López")).toBeInTheDocument()
-      );
-
-      expect(performance.now() - start).toBeLessThan(1000);
-    });
+    const hud = screen.getByRole("complementary", { name: /HUD del jugador/i });
+    const img = screen.getByRole("img", { name: /Ana Torres/i });
+    expect(img).toHaveAttribute("src", avatarUrl);
+    expect(within(hud).getByText(/750/)).toBeInTheDocument();
   });
 
-  describe("Balance en tiempo real — actualización al regresar de partida", () => {
-    test("balance updates when tab becomes visible again (visibilitychange)", async () => {
-      mockIdentityThenBalance(
-        { name: "Luis Peña", avatar: "https://cdn.example.com/av.jpg", balance: 500 },
-        320 // balance after game
-      );
-
-      render(<PlayerHUD />);
-
-      // Wait for initial load
-      await waitFor(() => expect(screen.getByText(/500/)).toBeInTheDocument());
-
-      // Simulate returning from a game tab
-      await act(async () => {
-        Object.defineProperty(document, "visibilityState", {
-          value: "visible",
-          writable: true,
-          configurable: true,
-        });
-        document.dispatchEvent(new Event("visibilitychange"));
-      });
-
-      // Balance should update without page reload
-      await waitFor(() => expect(screen.getByText(/320/)).toBeInTheDocument());
-      expect(screen.queryByText(/500/)).not.toBeInTheDocument();
+  test("renders zero balance with zero-balance style", async () => {
+    mockIdentityAndBalance({
+      identity: { name: "María Ruiz", avatar: "M" },
+      balances: [{ userId: "u2", amount: 0, canReceiveBonus: true, nextBonusAt: null }],
     });
 
-    test("balance does NOT update when tab becomes hidden", async () => {
-      const fetchMock = jest.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ name: "Luis Peña", avatar: "https://x.com/a.jpg", balance: 500 }),
-      } as Response);
-      global.fetch = fetchMock;
+    render(<PlayerHUD />);
 
-      render(<PlayerHUD />);
-      await waitFor(() => expect(screen.getByText(/500/)).toBeInTheDocument());
-
-      const callsAfterInit = fetchMock.mock.calls.length;
-
-      await act(async () => {
-        Object.defineProperty(document, "visibilityState", {
-          value: "hidden",
-          writable: true,
-          configurable: true,
-        });
-        document.dispatchEvent(new Event("visibilitychange"));
-      });
-
-      // No additional fetch should have been made
-      expect(fetchMock.mock.calls.length).toBe(callsAfterInit);
-    });
+    const hud = await screen.findByRole("complementary", { name: /HUD del jugador/i });
+    await waitFor(() => expect(within(hud).getByText("0")).toBeInTheDocument());
+    const amount = within(hud).getByText("0");
+    expect(amount).toHaveClass("hud-balance-amount", "is-zero");
   });
 
-  describe("Aviso de saldo en 0 — CTA aparece correctamente", () => {
-    test("shows zero-balance warning banner when balance is 0", async () => {
-      mockIdentityFetch({ name: "María Ruiz", avatar: "https://cdn.example.com/av.jpg", balance: 0 });
-
-      render(<PlayerHUD />);
-
-      await waitFor(() =>
-        expect(screen.getByRole("alert")).toBeInTheDocument()
-      );
+  test("shows claim CTA only when bonus is available", async () => {
+    mockIdentityAndBalance({
+      identity: { name: "Luis Peña", avatar: "L" },
+      balances: [{ userId: "u3", amount: 500, canReceiveBonus: true, nextBonusAt: null }],
     });
 
-    test("zero-balance banner contains a claim CTA button", async () => {
-      mockIdentityFetch({ name: "María Ruiz", avatar: "https://cdn.example.com/av.jpg", balance: 0 });
+    render(<PlayerHUD />);
 
-      render(<PlayerHUD />);
+    expect(await screen.findByRole("button", { name: /Reclamar bono diario/i })).toBeInTheDocument();
+  });
 
-      await waitFor(() => {
-        const cta = screen.getByRole("button", { name: /Reclamar/i });
-        expect(cta).toBeInTheDocument();
-      });
+  test("hides claim CTA and shows countdown when bonus is unavailable", async () => {
+    mockIdentityAndBalance({
+      identity: { name: "Luis Peña", avatar: "L" },
+      balances: [
+        {
+          userId: "u3",
+          amount: 500,
+          canReceiveBonus: false,
+          nextBonusAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+        },
+      ],
     });
 
-    test("clicking the claim CTA calls onClaimDaily callback", async () => {
-      mockIdentityFetch({ name: "María Ruiz", avatar: "https://cdn.example.com/av.jpg", balance: 0 });
-      const onClaimDaily = jest.fn();
-      const user = userEvent.setup();
+    render(<PlayerHUD />);
 
-      render(<PlayerHUD onClaimDaily={onClaimDaily} />);
+    await waitFor(() => expect(screen.getByText("Luis Peña")).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: /Reclamar bono diario/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/Próximo bono en/i)).toBeInTheDocument();
+  });
 
-      await waitFor(() => screen.getByRole("button", { name: /Reclamar/i }));
-      await user.click(screen.getByRole("button", { name: /Reclamar/i }));
-
-      expect(onClaimDaily).toHaveBeenCalledTimes(1);
+  test("clicking claim bonus calls bonus endpoint and updates amount optimistically", async () => {
+    const user = userEvent.setup();
+    mockIdentityAndBalance({
+      identity: { name: "María Ruiz", avatar: "M" },
+      balances: [{ userId: "u2", amount: 0, canReceiveBonus: true, nextBonusAt: null }],
+      bonusAmount: 100,
     });
 
-    test("does NOT show zero-balance banner when balance is positive", async () => {
-      mockIdentityFetch({ name: "María Ruiz", avatar: "https://cdn.example.com/av.jpg", balance: 500 });
+    render(<PlayerHUD />);
 
-      render(<PlayerHUD />);
+    const cta = await screen.findByRole("button", { name: /Reclamar bono diario/i });
+    await user.click(cta);
 
-      await waitFor(() => expect(screen.getByText("María Ruiz")).toBeInTheDocument());
-      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await waitFor(() => {
+      const hud = screen.getByRole("complementary", { name: /HUD del jugador/i });
+      expect((global.fetch as jest.Mock).mock.calls.some((args) => String(args[0]).endsWith("/player/bonus"))).toBe(true);
+      expect(within(hud).getByText(/100/)).toBeInTheDocument();
     });
   });
 });
