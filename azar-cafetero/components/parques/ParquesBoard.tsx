@@ -30,7 +30,19 @@ export default function ParquesBoard() {
             {/* Outer frame */}
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-[#0a1f0a] via-[#1a3a1a] to-[#0a1f0a] shadow-2xl">
               {/* Inner board area */}
-              <div className="absolute inset-6 rounded-xl bg-gradient-to-br from-[#1a4a1a] via-[#0d3a0d] to-[#1a4a1a] shadow-inner overflow-hidden">
+              <div className="absolute inset-6 rounded-xl overflow-hidden">
+  <svg
+    viewBox="0 0 1000 1000" 
+    className="w-full h-full"
+    preserveAspectRatio="xMidYMid slice"
+  >
+    <image
+      href="/images/parques-board.png"
+      width="1000"
+      height="1000"
+    />
+  </svg>
+</div>
                 {/* Grid lines */}
                 <div
                   className="absolute inset-0 opacity-20"
