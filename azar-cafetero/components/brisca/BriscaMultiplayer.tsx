@@ -12,6 +12,7 @@ import {
   Suit as BackendSuit,
   Rank as BackendRank,
 } from "@/hooks/useBriscaWebSocket";
+import { useBalance } from "@/hooks/useBalance";
 
 // ============ TYPE DEFINITIONS ============
 type Suit = "Oros" | "Copas" | "Espadas" | "Bastos";
@@ -299,6 +300,9 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
     scoresById:Record<string,number>; trickCardsByPlayer:Record<string,Card>;
   }|null>(null);
 
+  const BET_AMOUNT = 100;
+  const { amount: playerBalance, refreshBalance } = useBalance();
+
   const { isConnected, connectionStatus, error, gameState, connect, createGame, joinGame, startGame, playCard, requestGameState } =
     useBriscaWebSocket({ onError:(err)=>console.error("[Brisca] Error:",err) });
 
@@ -460,8 +464,12 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
 
   const handleStartGame=useCallback(()=>{
     if (mockMode) return;
+    if (playerBalance !== null && playerBalance < BET_AMOUNT) {
+      pushAlert(`Saldo insuficiente. Necesitas al menos ${BET_AMOUNT} fichas para jugar.`, "info");
+      return;
+    }
     startGame(gameId);
-  },[mockMode, gameId, startGame]);
+  },[mockMode, gameId, startGame, playerBalance, BET_AMOUNT, pushAlert]);
 
   const byPos=(pos:Pos):Player|undefined=>players.find(p=>p.pos===pos);
   const playedBy=(pid:string):Card|undefined=>currentTrick[pid];
@@ -534,6 +542,11 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
     animationTimeoutsRef.current=[];
   },[]);
 
+  // Refresca el saldo al terminar la partida para mostrar el resultado actualizado
+  useEffect(()=>{
+    if (phase==="finished") refreshBalance();
+  },[phase, refreshBalance]);
+
   // ============ BACKGROUND — poker felt ============
 
 
@@ -601,11 +614,24 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
               </div>
             </div>
             {canStart&&(
-              <button onClick={handleStartGame} style={{ width:"100%",background:`linear-gradient(135deg, ${COL.amarillo}, ${COL.oro})`,color:"#1a0000",fontWeight:"bold",fontSize:16,padding:"15px 28px",borderRadius:12,border:`2px solid ${COL.rojo}`,cursor:"pointer",fontFamily:"Georgia,serif",letterSpacing:3,textTransform:"uppercase",boxShadow:`0 0 28px rgba(255,209,0,0.55), 0 4px 14px rgba(0,0,0,0.4)`,transition:"transform 0.15s" }}
-                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="scale(1.02)";}}
-                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="scale(1)";}}>
-                ¡Iniciar Partida!
-              </button>
+              <>
+                <p style={{ color:`${COL.amarillo}88`,fontSize:12,marginBottom:10 }}>
+                  Apuesta: <strong style={{ color:COL.amarillo }}>{BET_AMOUNT} fichas</strong>
+                  {playerBalance !== null && (
+                    <span style={{ color:playerBalance < BET_AMOUNT ? "#f87171" : "#4ade80", marginLeft:8 }}>
+                      (tu saldo: {playerBalance})
+                    </span>
+                  )}
+                </p>
+                <button
+                  onClick={handleStartGame}
+                  disabled={playerBalance !== null && playerBalance < BET_AMOUNT}
+                  style={{ width:"100%",background:playerBalance !== null && playerBalance < BET_AMOUNT ? "rgba(100,100,100,0.5)" : `linear-gradient(135deg, ${COL.amarillo}, ${COL.oro})`,color:"#1a0000",fontWeight:"bold",fontSize:16,padding:"15px 28px",borderRadius:12,border:`2px solid ${COL.rojo}`,cursor:playerBalance !== null && playerBalance < BET_AMOUNT ? "not-allowed" : "pointer",fontFamily:"Georgia,serif",letterSpacing:3,textTransform:"uppercase",boxShadow:`0 0 28px rgba(255,209,0,0.55), 0 4px 14px rgba(0,0,0,0.4)`,transition:"transform 0.15s",opacity:playerBalance !== null && playerBalance < BET_AMOUNT ? 0.6 : 1 }}
+                  onMouseEnter={e=>{if(!(playerBalance !== null && playerBalance < BET_AMOUNT))(e.currentTarget as HTMLElement).style.transform="scale(1.02)";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="scale(1)";}}>
+                  {playerBalance !== null && playerBalance < BET_AMOUNT ? "Saldo insuficiente" : "¡Iniciar Partida!"}
+                </button>
+              </>
             )}
             {!canStart&&players.length<2&&<p style={{ color:`${COL.amarillo}99`,fontSize:13,marginTop:8 }}>Se necesitan al menos 2 jugadores</p>}
             <div style={{ marginTop:20,padding:"14px 18px",borderRadius:12,background:"rgba(0,0,0,0.4)",border:`1px solid rgba(255,209,0,0.18)`,color:"rgba(255,248,231,0.4)",fontSize:11,lineHeight:2,textAlign:"left" }}>
