@@ -1,4 +1,6 @@
-const BASE_URL = process.env.NEXT_PUBLIC_USER_URL || "http://localhost:8082";
+const BASE_URL = process.env.NEXT_PUBLIC_USER_URL 
+  || process.env.NEXT_PUBLIC_GATEWAY_URL 
+  || "http://localhost:8084";
 
 function getHeaders() {
     const token = localStorage.getItem("azar_jwt");
