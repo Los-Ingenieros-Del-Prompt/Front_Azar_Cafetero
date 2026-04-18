@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUserContext } from "@/context/UserContext";
+import ParquesBoard from "@/components/parques/ParquesBoard";
 import { GameControls } from "@/components/parques/GameControls";
 import {
   useParquesWebSocket,
@@ -11,7 +12,7 @@ import {
   PieceDTO,
 } from "@/hooks/useParquesWebSocket";
 
-// ─── Posiciones del tablero (viewBox 0-100) ────────────────────────────────────
+// ─── Posiciones del tablero (viewBox 0-100) ─────────────────────────────────
 export const CELL_POSITIONS: [number, number][] = [
   [20.21, 62.06], // 0
   [25.05, 61.65], // 1
@@ -108,20 +109,28 @@ export const COLOR_EMOJI: Record<string, string> = {
   AMARILLO: "🟡", AZUL: "🔵", ROJO: "🔴", VERDE: "🟢",
 };
 
-// ─── Props ─────────────────────────────────────────────────────────────────────
+// ─── Props ───────────────────────────────────────────────────────────────────
 interface ParquesMultiplayerProps {
   gameId?: string;
   userName?: string;
   userId?: string;
 }
 
-// ─── Componente principal ──────────────────────────────────────────────────────
-export default function ParquesMultiplayer({ gameId: propGameId, userName, userId }: ParquesMultiplayerProps) {
+// ─── Componente ──────────────────────────────────────────────────────────────
+export default function ParquesMultiplayer({
+  gameId: propGameId,
+  userName,
+  userId,
+}: ParquesMultiplayerProps) {
   const router = useRouter();
   const { user } = useUserContext();
 
-  const [playerId] = useState(() => userId || user?.userId || `player-${Math.random().toString(36).slice(2, 8)}`);
-  const [playerName] = useState(() => userName || user?.name || `Jugador${Math.floor(Math.random() * 1000)}`);
+  const [playerId] = useState(
+    () => userId || user?.userId || `player-${Math.random().toString(36).slice(2, 8)}`
+  );
+  const [playerName] = useState(
+    () => userName || user?.name || `Jugador${Math.floor(Math.random() * 1000)}`
+  );
   const [gameId] = useState(() => propGameId || "parques-game-1");
 
   const hasJoinedRef = useRef(false);
@@ -131,8 +140,10 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     connect, subscribeToGame, createGame, joinGame, rollDice, movePiece,
   } = useParquesWebSocket({ onError: (err) => console.error("[Parqués] WS error:", err) });
 
+  // 1. Conectar al montar
   useEffect(() => { connect(); }, [connect]);
 
+  // 2. Suscribirse y crear partida al conectar
   useEffect(() => {
     if (!isConnected || hasJoinedRef.current) return;
     hasJoinedRef.current = true;
@@ -145,9 +156,10 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     init();
   }, [isConnected]); // eslint-disable-line
 
-  const isMyTurn     = gameState?.currentPlayerId === playerId;
-  const myPlayer     = gameState?.players.find((p) => p.id === playerId) ?? null;
-  const canRoll      = isMyTurn && !gameState?.diceRolled && (gameState?.players.length ?? 0) >= 2;
+  // ─── Datos derivados ────────────────────────────────────────────────────
+  const isMyTurn = gameState?.currentPlayerId === playerId;
+  const myPlayer = gameState?.players.find((p) => p.id === playerId) ?? null;
+  const canRoll  = isMyTurn && !gameState?.diceRolled && (gameState?.players.length ?? 0) >= 2;
 
   const movablePieces = useMemo<PieceDTO[]>(() => {
     if (!gameState?.diceRolled || !isMyTurn || !myPlayer) return [];
@@ -163,15 +175,72 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     if (gameState?.diceRolled && isMyTurn) movePiece(gameId, playerId, pieceId);
   };
 
-  // Tamaño cuadrado del tablero
-  const BOARD_SIZE = "min(calc(100vh - 230px), calc(100vw - 300px))";
+  // ─── SVG de fichas ──────────────────────────────────────────────────────
+  const FichasSVG = (
+    <svg
+      viewBox="0 0 100 100"
+      style={{ width: "100%", height: "100%" }}
+    >
+      {gameState?.players.map((player) =>
+        player.pieces.map((piece, pieceIndex) => {
+          let cx: number, cy: number;
+
+          if (piece.inJail) {
+            const pos = JAIL_POSITIONS[player.color]?.[pieceIndex];
+            if (!pos) return null;
+            [cx, cy] = pos;
+          } else if (piece.atHome) {
+            return null;
+          } else {
+            const pos = CELL_POSITIONS[piece.absolutePosition];
+            if (!pos) return null;
+            [cx, cy] = pos;
+          }
+
+          const isMovable = movablePieces.some((p) => p.id === piece.id);
+          const color     = PIECE_COLORS[player.color] ?? "#ffffff";
+
+          return (
+            <g
+              key={piece.id}
+              onClick={() => isMovable && handleMovePiece(piece.id)}
+              style={{ cursor: isMovable ? "pointer" : "default" }}
+            >
+              {/* Sombra */}
+              <circle cx={cx + 0.3} cy={cy + 0.4} r={2.2} fill="rgba(0,0,0,0.35)" />
+              {/* Ficha */}
+              <circle
+                cx={cx} cy={cy} r={2.2}
+                fill={color}
+                stroke={isMovable ? "white" : "rgba(0,0,0,0.5)"}
+                strokeWidth={isMovable ? 0.7 : 0.35}
+              />
+              {/* Brillo */}
+              <circle cx={cx - 0.65} cy={cy - 0.65} r={0.75} fill="rgba(255,255,255,0.55)" />
+              {/* Anillo cuando es movible */}
+              {isMovable && (
+                <circle
+                  cx={cx} cy={cy} r={2.9}
+                  fill="none"
+                  stroke="white"
+                  strokeWidth={0.45}
+                  opacity={0.7}
+                />
+              )}
+            </g>
+          );
+        })
+      )}
+    </svg>
+  );
 
   // ═══════════════════════════════════════
   // PANTALLA: Conectando
   // ═══════════════════════════════════════
   if (connectionStatus !== "connected") {
     return (
-      <div className="relative min-h-screen w-full text-white overflow-hidden bg-[#0d1f0d]">
+      <div className="relative min-h-screen w-full text-white overflow-hidden">
+        <ParquesBoard />
         <GameControls onMenu={() => router.push("/lobby")} onExit={() => router.push("/")} />
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center p-10 rounded-2xl border border-emerald-500/40 bg-black/70 max-w-sm">
@@ -190,7 +259,8 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   // ═══════════════════════════════════════
   if (!gameState || gameState.players.length < 2) {
     return (
-      <div className="relative min-h-screen w-full text-white overflow-hidden bg-[#0d1f0d]">
+      <div className="relative min-h-screen w-full text-white overflow-hidden">
+        <ParquesBoard />
         <GameControls onMenu={() => router.push("/lobby")} onExit={() => router.push("/")} />
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center p-10 rounded-2xl border-2 border-emerald-500/40 bg-black/80 max-w-md w-full mx-4">
@@ -205,7 +275,10 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
                 {(gameState?.players ?? []).map((p: PlayerDTO) => {
                   const s = COLOR_STYLES[p.color] ?? COLOR_STYLES.VERDE;
                   return (
-                    <div key={p.id} className={`flex items-center justify-between px-4 py-3 rounded-xl border ${s.border} ${s.bg}`}>
+                    <div
+                      key={p.id}
+                      className={`flex items-center justify-between px-4 py-3 rounded-xl border ${s.border} ${s.bg}`}
+                    >
                       <span className={`font-bold text-sm ${s.text}`}>
                         {COLOR_EMOJI[p.color]} {p.name}{p.id === playerId && " (Tú)"}
                       </span>
@@ -232,12 +305,15 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     const winnerPlayer = gameState.players.find((p) => p.id === gameState.winnerId);
     const ws = winnerPlayer ? COLOR_STYLES[winnerPlayer.color] : COLOR_STYLES.VERDE;
     return (
-      <div className="relative min-h-screen w-full text-white overflow-hidden bg-[#0d1f0d]">
+      <div className="relative min-h-screen w-full text-white overflow-hidden">
+        <ParquesBoard />
         <GameControls onMenu={() => router.push("/lobby")} onExit={() => router.push("/")} />
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center p-10 rounded-2xl border-2 border-emerald-500/50 bg-black/90 max-w-md w-full mx-4">
             <div className="text-6xl mb-4">🏆</div>
-            <h2 className="text-2xl font-bold text-emerald-400 mb-4 uppercase tracking-widest">¡Partida Terminada!</h2>
+            <h2 className="text-2xl font-bold text-emerald-400 mb-4 uppercase tracking-widest">
+              ¡Partida Terminada!
+            </h2>
             {winnerPlayer && (
               <p className={`text-xl mb-6 ${ws.text}`}>
                 {COLOR_EMOJI[winnerPlayer.color]} <strong>{winnerPlayer.name}</strong>
@@ -246,11 +322,18 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
             )}
             <div className="flex flex-col gap-2 mb-6">
               {[...gameState.players]
-                .sort((a, b) => b.pieces.filter((p) => p.atHome).length - a.pieces.filter((p) => p.atHome).length)
+                .sort(
+                  (a, b) =>
+                    b.pieces.filter((p) => p.atHome).length -
+                    a.pieces.filter((p) => p.atHome).length
+                )
                 .map((p) => {
                   const s = COLOR_STYLES[p.color];
                   return (
-                    <div key={p.id} className={`flex justify-between items-center px-4 py-2 rounded-lg border ${s.border} ${s.bg}`}>
+                    <div
+                      key={p.id}
+                      className={`flex justify-between items-center px-4 py-2 rounded-lg border ${s.border} ${s.bg}`}
+                    >
                       <span className={`font-bold text-sm ${s.text}`}>
                         {COLOR_EMOJI[p.color]} {p.name}{p.id === playerId && " (Tú)"}
                       </span>
@@ -262,8 +345,18 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
                 })}
             </div>
             <div className="flex gap-3">
-              <button onClick={() => window.location.reload()} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition">Revancha</button>
-              <button onClick={() => router.push("/parques")} className="flex-1 bg-white/10 hover:bg-white/20 text-white font-medium py-3 rounded-xl transition">Salir</button>
+              <button
+                onClick={() => window.location.reload()}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition"
+              >
+                Revancha
+              </button>
+              <button
+                onClick={() => router.push("/parques")}
+                className="flex-1 bg-white/10 hover:bg-white/20 text-white font-medium py-3 rounded-xl transition"
+              >
+                Salir
+              </button>
             </div>
           </div>
         </div>
@@ -275,7 +368,6 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   // PANTALLA: Juego en curso
   // ═══════════════════════════════════════
 
-  // Rivales: primer rival arriba, segundo a la izquierda, tercero a la derecha
   const opponents   = gameState.players.filter((p) => p.id !== playerId);
   const topPlayer   = opponents[0] ?? null;
   const leftPlayer  = opponents[1] ?? null;
@@ -283,141 +375,49 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
 
   return (
     <div
-      className="relative w-full text-white overflow-hidden bg-[#0d1f0d]"
+      className="relative w-full text-white overflow-hidden"
       style={{ height: "100vh", display: "flex", flexDirection: "column", userSelect: "none" }}
     >
+      {/* Tablero con fichas como children */}
+      <ParquesBoard>{FichasSVG}</ParquesBoard>
+
       <GameControls onMenu={() => router.push("/lobby")} onExit={() => router.push("/")} />
 
-      <div className="relative z-10 flex flex-col h-full overflow-hidden">
+      {/* UI encima del tablero */}
+      <div className="relative z-10 flex flex-col h-full overflow-hidden pointer-events-none">
 
-        {/* Banner de error de dominio */}
+        {/* Banner de error */}
         {error && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 px-6 py-3 rounded-xl bg-red-900/80 border border-red-500 text-red-200 text-sm font-bold backdrop-blur-sm">
+          <div
+            className="absolute top-4 left-1/2 -translate-x-1/2 z-30 px-6 py-3 rounded-xl bg-red-900/80 border border-red-500 text-red-200 text-sm font-bold backdrop-blur-sm"
+            style={{ pointerEvents: "auto" }}
+          >
             {error}
           </div>
         )}
 
         {/* ── Jugador de arriba ── */}
-        <div className="flex justify-center pt-3 pb-1 min-h-[48px] items-center">
-          {topPlayer
-            ? <PlayerBadge player={topPlayer} isLeader={gameState.currentPlayerId === topPlayer.id} />
-            : <div />}
-        </div>
-
-        {/* ── Centro: lateral izquierdo | tablero | lateral derecho ── */}
-        <div className="flex-1 flex items-center justify-center gap-3 min-h-0 px-2">
-
-          {/* Jugador izquierda */}
-          <div className="flex-shrink-0 w-24 flex justify-center">
-            {leftPlayer && (
-              <PlayerBadge player={leftPlayer} isLeader={gameState.currentPlayerId === leftPlayer.id} vertical />
-            )}
-          </div>
-
-          {/* TABLERO */}
-          <div
-            style={{
-              position: "relative",
-              width: BOARD_SIZE,
-              height: BOARD_SIZE,
-              flexShrink: 0,
-            }}
-          >
-            {/* Imagen del tablero */}
-            <img
-              src="/images/parques-board.svg"
-              alt="Tablero Parqués"
-              style={{ width: "100%", height: "100%", display: "block" }}
-              draggable={false}
+        <div
+          className="flex justify-center pt-3 pb-1 min-h-[48px] items-center"
+          style={{ pointerEvents: "auto" }}
+        >
+          {topPlayer && (
+            <PlayerBadge
+              player={topPlayer}
+              isLeader={gameState.currentPlayerId === topPlayer.id}
             />
-
-            {/* SVG transparente con las fichas encima */}
-            <svg
-              viewBox="0 0 100 100"
-              style={{
-                position: "absolute",
-                top: 0, left: 0,
-                width: "100%", height: "100%",
-              }}
-            >
-              {gameState.players.map((player) =>
-                player.pieces.map((piece, pieceIndex) => {
-                  let cx: number, cy: number;
-
-                  if (piece.inJail) {
-                    const pos = JAIL_POSITIONS[player.color]?.[pieceIndex];
-                    if (!pos) return null;
-                    [cx, cy] = pos;
-                  } else if (piece.atHome) {
-                    return null;
-                  } else {
-                    const pos = CELL_POSITIONS[piece.absolutePosition];
-                    if (!pos) return null;
-                    [cx, cy] = pos;
-                  }
-
-                  const isMovable = movablePieces.some((p) => p.id === piece.id);
-                  const color     = PIECE_COLORS[player.color] ?? "#ffffff";
-
-                  return (
-                    <g
-                      key={piece.id}
-                      onClick={() => isMovable && handleMovePiece(piece.id)}
-                      style={{ cursor: isMovable ? "pointer" : "default" }}
-                    >
-                      {/* Sombra */}
-                      <circle
-                        cx={cx + 0.3} cy={cy + 0.4}
-                        r={2.2}
-                        fill="rgba(0,0,0,0.4)"
-                      />
-                      {/* Ficha */}
-                      <circle
-                        cx={cx} cy={cy}
-                        r={2.2}
-                        fill={color}
-                        stroke={isMovable ? "white" : "rgba(0,0,0,0.5)"}
-                        strokeWidth={isMovable ? 0.7 : 0.35}
-                      />
-                      {/* Brillo interior */}
-                      <circle
-                        cx={cx - 0.65} cy={cy - 0.65}
-                        r={0.75}
-                        fill="rgba(255,255,255,0.55)"
-                      />
-                      {/* Pulso cuando es movible */}
-                      {isMovable && (
-                        <circle
-                          cx={cx} cy={cy}
-                          r={2.8}
-                          fill="none"
-                          stroke="white"
-                          strokeWidth={0.4}
-                          opacity={0.6}
-                        />
-                      )}
-                    </g>
-                  );
-                })
-              )}
-            </svg>
-          </div>
-
-          {/* Jugador derecha */}
-          <div className="flex-shrink-0 w-24 flex justify-center">
-            {rightPlayer && (
-              <PlayerBadge player={rightPlayer} isLeader={gameState.currentPlayerId === rightPlayer.id} vertical />
-            )}
-          </div>
-
+          )}
         </div>
+
+        {/* ── Espacio central (el tablero ocupa el fondo) ── */}
+        <div className="flex-1" />
 
         {/* ── Indicador de turno ── */}
-        <div className="text-center py-2">
+        <div className="text-center py-2" style={{ pointerEvents: "none" }}>
           <span
             className="inline-block px-5 py-2 rounded-full text-sm font-bold"
             style={{
-              background: isMyTurn ? "rgba(16,185,129,0.25)" : "rgba(0,0,0,0.4)",
+              background: isMyTurn ? "rgba(16,185,129,0.25)" : "rgba(0,0,0,0.55)",
               border:     `2px solid ${isMyTurn ? "#10b981" : "rgba(255,255,255,0.15)"}`,
               color:      isMyTurn ? "#10b981" : "rgba(255,255,255,0.5)",
             }}
@@ -431,14 +431,16 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
         </div>
 
         {/* ── Barra inferior ── */}
-        <div className="flex items-center justify-between px-6 py-3 bg-black/60 border-t border-white/10 pl-20 gap-3 flex-wrap">
-
+        <div
+          className="flex items-center justify-between px-6 py-3 bg-black/60 border-t border-white/10 pl-20 gap-3 flex-wrap"
+          style={{ pointerEvents: "auto" }}
+        >
           {/* Mi badge */}
           {myPlayer && (
             <PlayerBadge player={myPlayer} isLeader={isMyTurn} isMe />
           )}
 
-          {/* Resultado del dado */}
+          {/* Dados */}
           {gameState.diceRolled && (
             <div className="flex items-center gap-2 text-2xl">
               <span>{getDiceEmoji(gameState.die1)}</span>
@@ -463,10 +465,15 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
                     onClick={() => handleMovePiece(piece.id)}
                     className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-bold border border-white/30 bg-white/10 hover:bg-white/20 active:scale-95 transition"
                   >
-                    <span style={{
-                      display: "inline-block", width: 10, height: 10,
-                      borderRadius: "50%", background: color, border: "1.5px solid white",
-                    }} />
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: 10, height: 10,
+                        borderRadius: "50%",
+                        background: color,
+                        border: "1.5px solid white",
+                      }}
+                    />
                     Ficha {i + 1}
                     <span className="opacity-50 ml-1">
                       {piece.inJail ? "🔒" : `pos.${piece.relativePosition}`}
@@ -491,6 +498,21 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
             </button>
           )}
 
+          {/* Badges rivales (esquinas) */}
+          <div className="flex gap-2 ml-auto">
+            {leftPlayer && (
+              <PlayerBadge
+                player={leftPlayer}
+                isLeader={gameState.currentPlayerId === leftPlayer.id}
+              />
+            )}
+            {rightPlayer && (
+              <PlayerBadge
+                player={rightPlayer}
+                isLeader={gameState.currentPlayerId === rightPlayer.id}
+              />
+            )}
+          </div>
         </div>
 
       </div>
@@ -498,28 +520,26 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   );
 }
 
-// ─── Badge de jugador ──────────────────────────────────────────────────────────
+// ─── Badge de jugador ─────────────────────────────────────────────────────────
 function PlayerBadge({
   player,
   isLeader,
   isMe = false,
-  vertical = false,
 }: {
   player: PlayerDTO;
   isLeader: boolean;
   isMe?: boolean;
-  vertical?: boolean;
 }) {
   const s          = COLOR_STYLES[player.color] ?? COLOR_STYLES.VERDE;
   const homePieces = player.pieces.filter((p) => p.atHome).length;
 
   return (
     <div
-      className={`flex ${vertical ? "flex-col" : "flex-row"} items-center gap-1 px-2 py-2 rounded-xl border backdrop-blur-sm ${s.border} ${s.bg}`}
+      className={`flex items-center gap-2 px-3 py-2 rounded-xl border backdrop-blur-sm ${s.border} ${s.bg}`}
     >
       <span className="text-base leading-none">{COLOR_EMOJI[player.color]}</span>
       <div className="flex flex-col min-w-0">
-        <span className={`text-xs font-bold leading-tight truncate ${s.text}`}>
+        <span className={`text-xs font-bold leading-tight truncate max-w-[100px] ${s.text}`}>
           {player.name}{isMe && " (Tú)"}
         </span>
         <span className="text-white/40 text-[10px] leading-tight whitespace-nowrap">
@@ -530,7 +550,7 @@ function PlayerBadge({
   );
 }
 
-// ─── Emoji de dado ─────────────────────────────────────────────────────────────
+// ─── Emoji de dado ────────────────────────────────────────────────────────────
 function getDiceEmoji(n: number): string {
   return ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"][n] ?? "🎲";
 }
