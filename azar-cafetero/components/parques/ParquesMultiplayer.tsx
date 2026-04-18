@@ -41,7 +41,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
 
   const hasJoinedRef = useRef(false);
 
-  const { isConnected, connectionStatus, error, gameState, connect, subscribeToGame, createGame, rollDice, movePiece } =
+  const { isConnected, connectionStatus, error, gameState, connect, subscribeToGame, createGame, joinGame, rollDice, movePiece } =
     useParquesWebSocket({ onError: (err) => console.error("[Parqués] WS error:", err) });
 
   // 1. Conectar al montar
@@ -52,7 +52,15 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     if (!isConnected || hasJoinedRef.current) return;
     hasJoinedRef.current = true;
     subscribeToGame(gameId);
-    createGame([{ id: playerId, name: playerName }]).catch(console.error);
+    const init = async () => {
+      try {
+        await createGame(gameId, [{ id: playerId, name: playerName }]);
+      } catch (e) {
+        console.log("[Parqués] createGame error (puede que ya exista):", e);
+      }
+      joinGame(gameId, playerId, playerName);
+    };
+    init();
   }, [isConnected]); // eslint-disable-line
 
   // ─── Datos derivados ──────────────────────────────────────────────────────

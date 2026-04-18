@@ -50,7 +50,7 @@ interface UseParquesWebSocketOptions {
 }
 
 const PARQUES_WS_URL =
-  process.env.NEXT_PUBLIC_PARQUES_WS_URL ?? "https://azar-cafetero.duckdns.org/parques/ws";
+  process.env.NEXT_PUBLIC_PARQUES_WS_URL ?? "https://azar-cafetero.duckdns.org/parques-ws";
 
 export function useParquesWebSocket(options: UseParquesWebSocketOptions = {}) {
   const { url = PARQUES_WS_URL, onError, onConnected, onDisconnected } = options;
@@ -160,26 +160,37 @@ export function useParquesWebSocket(options: UseParquesWebSocketOptions = {}) {
   // Destino: /app/game/create
   // Payload: { players: [{id, name}, ...] }
   // Broadcast: /topic/game/{gameId}
-  const createGame = useCallback(
-    (players: PlayerInput[]): Promise<void> => {
-      return new Promise((resolve, reject) => {
-        const client = clientRef.current;
-        if (!client?.connected) {
-          reject(new Error("No conectado"));
-          return;
-        }
+  // Modificar createGame para enviar gameId
+const createGame = useCallback(
+  (gameId: string, players: PlayerInput[]): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const client = clientRef.current;
+      if (!client?.connected) {
+        reject(new Error("No conectado"));
+        return;
+      }
 
-        client.publish({
-          destination: "/app/game/create",
-          body: JSON.stringify({ players }),
-        });
-
-        // El backend responde en /topic/game/{gameId}, que ya estará suscrito
-        setTimeout(resolve, 300);
+      client.publish({
+        destination: "/app/game/create",
+        body: JSON.stringify({ gameId, players }),  // ← agregar gameId
       });
-    },
-    []
-  );
+
+      setTimeout(resolve, 300);
+    });
+  },
+  []
+);
+
+// Agregar joinGame
+const joinGame = useCallback((gameId: string, playerId: string, playerName: string) => {
+  const client = clientRef.current;
+  if (!client?.connected) return;
+
+  client.publish({
+    destination: `/app/game/${gameId}/join`,
+    body: JSON.stringify({ gameId, playerId, playerName }),
+  });
+}, []);
 
   // ── Lanzar dado ───────────────────────────────────────────────────────────
   // Destino: /app/game/{gameId}/roll
@@ -217,15 +228,16 @@ export function useParquesWebSocket(options: UseParquesWebSocketOptions = {}) {
   }, [disconnect]);
 
   return {
-    isConnected,
-    connectionStatus,
-    error,
-    gameState,
-    connect,
-    disconnect,
-    subscribeToGame,
-    createGame,
-    rollDice,
-    movePiece,
-  };
+  isConnected,
+  connectionStatus,
+  error,
+  gameState,
+  connect,
+  disconnect,
+  subscribeToGame,
+  createGame,
+  joinGame,   // ← agregar
+  rollDice,
+  movePiece,
+};
 }
