@@ -264,7 +264,7 @@ export default function PlayerHUD({ onLogout }: PlayerHUDProps) {
                 )}
                 🪙&nbsp;
                 <span className={`hud-balance-amount${amount === 0 ? " is-zero" : ""}`}>
-                  {(amount ?? 0).toLocaleString("es-CO")}
+                  {amount == null ? "—" : amount.toLocaleString("es-CO")}
                 </span>
                 &nbsp;fichas
               </span>
