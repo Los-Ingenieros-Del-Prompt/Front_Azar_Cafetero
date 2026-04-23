@@ -72,7 +72,7 @@ export default function BriscaFloor() {
     if (isLocalDevMock) return;
     if (isConnected && user) {
       subscribeToFloor(BRISCA_FLOOR_ID, user.name);
-      fetchTables().catch(console.error);
+      fetchTables(BRISCA_FLOOR_ID).catch(console.error);
     }
   }, [isLocalDevMock, isConnected, user, subscribeToFloor, fetchTables]);
 
@@ -85,7 +85,7 @@ export default function BriscaFloor() {
     
     setCreating(true);
     try {
-      const table = await createTable(newTableName, newTableBet, 4);
+      const table = await createTable(newTableName, newTableBet, BRISCA_FLOOR_ID, 4);
       // Notify other clients about the new table
       notifyTableCreated(BRISCA_FLOOR_ID, {
         tableId: table.tableId,

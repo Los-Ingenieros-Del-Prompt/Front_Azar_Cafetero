@@ -40,7 +40,7 @@ export default function ParquesFloor() {
   useEffect(() => {
     if (isConnected && user) {
       subscribeToFloor(PARQUES_FLOOR_ID, user.name);
-      fetchTables().catch(console.error);
+      fetchTables(PARQUES_FLOOR_ID).catch(console.error);
     }
   }, [isConnected, user, subscribeToFloor, fetchTables]);
 
@@ -52,7 +52,7 @@ export default function ParquesFloor() {
     if (!newTableName.trim() || creating) return;
     setCreating(true);
     try {
-      const table = await createTable(newTableName, newTableBet, MAX_PLAYERS);
+      const table = await createTable(newTableName, newTableBet, PARQUES_FLOOR_ID, MAX_PLAYERS);
       notifyTableCreated(PARQUES_FLOOR_ID, {
         tableId: table.tableId,
         tableName: table.tableName,
