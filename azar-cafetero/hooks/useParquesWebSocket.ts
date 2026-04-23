@@ -50,7 +50,7 @@ interface UseParquesWebSocketOptions {
 }
 
 const PARQUES_WS_URL =
-  process.env.NEXT_PUBLIC_PARQUES_WS_URL ?? "https://azar-cafetero.duckdns.org/game/ws";
+  process.env.NEXT_PUBLIC_PARQUES_WS_URL ?? "https://azar-cafetero.duckdns.org/parques-ws";
 
 export function useParquesWebSocket(options: UseParquesWebSocketOptions = {}) {
   const { url = PARQUES_WS_URL, onError, onConnected, onDisconnected } = options;
