@@ -11,6 +11,7 @@ import {
   PlayerDTO,
   PieceDTO,
 } from "@/hooks/useParquesWebSocket";
+import ParquesPieces from "./ParquesPieces";
 
 // ─── Estilos por color ─────────────────────────────────────────────────────────
 export const COLOR_STYLES: Record<string, { bg: string; border: string; text: string; hex: string }> = {
@@ -219,20 +220,18 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
           ))}
         </div>
 
-        {/* Centro — tablero
-          DATOS DISPONIBLES para renderizar las fichas:
-            gameState.players[i].pieces[j].absolutePosition  → casilla 0-67, -1=cárcel, 68=meta
-            gameState.players[i].pieces[j].relativePosition  → relativo al color
-            gameState.players[i].color                        → "AMARILLO"|"AZUL"|"ROJO"|"VERDE"
-            COLOR_STYLES[color].hex                           → color hex para SVG
-        */}
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-72 h-72 border-2 border-white/20 rounded-2xl flex flex-col items-center justify-center text-white/30 text-sm text-center px-4 gap-2">
-            <span>Tablero Parqués</span>
-            <span className="text-xs">(reemplaza con SVG del tablero)</span>
-            <span className="text-xs text-white/20">
-              Fichas disponibles via gameState.players[i].pieces[j].absolutePosition
-            </span>
+        {/* Centro — tablero */}
+        <div className="flex-1 flex items-center justify-center relative">
+          <div className="relative w-full max-w-2xl aspect-square">
+            {/* Las fichas se renderizan sobre el tablero */}
+            {gameState && (
+              <ParquesPieces
+                gameState={gameState}
+                isMyTurn={isMyTurn}
+                movablePieceIds={movablePieces.map(p => p.id)}
+                onPieceClick={handleMovePiece}
+              />
+            )}
           </div>
         </div>
 
