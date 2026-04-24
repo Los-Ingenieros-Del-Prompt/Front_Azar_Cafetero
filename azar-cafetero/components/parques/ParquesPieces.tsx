@@ -27,29 +27,30 @@ const generatePath = () => {
   };
 
   /**
-   * Recorrido de 68 casillas (17 por cuadrante: 8+8+1)
-   * Iniciando en salida amarilla (8, 18)
+   * Recorrido de 68 casillas (17 por cuadrante)
+   * Rotado para que Yellow (0) empiece en el brazo SUPERIOR (Top Right area)
+   * siguiendo el orden pedido por el usuario.
    */
   
-  // CUADRANTE 1 (Abajo -> Izquierda)
-  for (let i = 0; i < 8; i++) add(8, 18 - i);  // Subir brazo inferior
-  for (let i = 0; i < 8; i++) add(7 - i, 10); // Ir a la izquierda brazo izquierdo
-  add(0, 9);                                   // Esquina izquierda
-
-  // CUADRANTE 2 (Izquierda -> Arriba)
-  for (let i = 0; i < 8; i++) add(i + 1, 8);  // Ir a la derecha brazo izquierdo
-  for (let i = 0; i < 8; i++) add(8, 7 - i);   // Subir brazo superior
-  add(9, 0);                                   // Esquina superior
-
-  // CUADRANTE 3 (Arriba -> Derecha)
+  // CUADRANTE 1 (Arriba -> Derecha) - Salida de Amarillo (0-16)
   for (let i = 0; i < 8; i++) add(10, i + 1);  // Bajar brazo superior
   for (let i = 0; i < 8; i++) add(11 + i, 8);  // Ir a la derecha brazo derecho
   add(18, 9);                                  // Esquina derecha
 
-  // CUADRANTE 4 (Derecha -> Abajo)
+  // CUADRANTE 2 (Derecha -> Abajo) - Salida de Azul (17-33)
   for (let i = 0; i < 8; i++) add(17 - i, 10); // Ir a la izquierda brazo derecho
   for (let i = 0; i < 8; i++) add(10, 11 + i); // Bajar brazo inferior
   add(9, 18);                                  // Esquina inferior
+
+  // CUADRANTE 3 (Abajo -> Izquierda) - Salida de Verde (34-50)
+  for (let i = 0; i < 8; i++) add(8, 18 - i);  // Subir brazo inferior
+  for (let i = 0; i < 8; i++) add(7 - i, 10); // Ir a la izquierda brazo izquierdo
+  add(0, 9);                                   // Esquina izquierda
+
+  // CUADRANTE 4 (Izquierda -> Arriba) - Salida de Rojo (51-67)
+  for (let i = 0; i < 8; i++) add(i + 1, 8);  // Ir a la derecha brazo izquierdo
+  for (let i = 0; i < 8; i++) add(8, 7 - i);   // Subir brazo superior
+  add(9, 0);                                   // Esquina superior
 
   return path;
 };
@@ -64,20 +65,26 @@ const getPiecePosition = (absolutePosition: number, color: string, pieceIndex: n
       { dx: -40, dy: 40 },  { dx: 40, dy: 40 }
     ];
     const off = offsets[pieceIndex % 4];
-    // Coordenadas fijas para las esquinas (cárceles)
-    if (color === "AMARILLO") return { x: 180 + off.dx, y: 820 + off.dy };
-    if (color === "AZUL")     return { x: 180 + off.dx, y: 180 + off.dy };
-    if (color === "ROJO")     return { x: 820 + off.dx, y: 180 + off.dy };
-    if (color === "VERDE")    return { x: 820 + off.dx, y: 820 + off.dy };
+    // Layout pedido: TL: Red, TR: Yellow, BL: Green, BR: Blue
+    if (color === "AMARILLO") return { x: 820 + off.dx, y: 180 + off.dy }; // Top Right
+    if (color === "ROJO")     return { x: 180 + off.dx, y: 180 + off.dy }; // Top Left
+    if (color === "VERDE")    return { x: 180 + off.dx, y: 820 + off.dy }; // Bottom Left
+    if (color === "AZUL")     return { x: 820 + off.dx, y: 820 + off.dy }; // Bottom Right
   }
 
   // 2. META
   if (absolutePosition >= 68) {
     const center = { x: 500, y: 500 };
     const radius = 60;
-    const angleMap: Record<string, number> = { "AMARILLO": 90, "AZUL": 180, "ROJO": 270, "VERDE": 0 };
+    // Ajuste de ángulos para la meta
+    const angleMap: Record<string, number> = { 
+      "AMARILLO": 270, // Apunta hacia arriba (meta amarilla en TR/Top)
+      "AZUL": 0,       // Apunta a la derecha
+      "VERDE": 90,     // Apunta abajo
+      "ROJO": 180      // Apunta a la izquierda
+    };
     const baseAngle = angleMap[color] || 0;
-    const angle = (baseAngle + (pieceIndex - 2) * 15) * (Math.PI / 180);
+    const angle = (baseAngle + (pieceIndex - 1.5) * 20) * (Math.PI / 180);
     return {
       x: center.x + radius * Math.cos(angle),
       y: center.y + radius * Math.sin(angle)
@@ -89,7 +96,6 @@ const getPiecePosition = (absolutePosition: number, color: string, pieceIndex: n
     return BOARD_PATH[absolutePosition];
   }
 
-  // Fallback al centro
   return { x: 500, y: 500 };
 };
 

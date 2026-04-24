@@ -15,13 +15,13 @@ import ParquesPieces from "./ParquesPieces";
 
 // ─── Estilos por color ─────────────────────────────────────────────────────────
 export const COLOR_STYLES: Record<string, { bg: string; border: string; text: string; hex: string }> = {
-  AMARILLO: { bg: "bg-yellow-500/20",  border: "border-yellow-400",  text: "text-yellow-300",  hex: "#facc15" },
-  AZUL:     { bg: "bg-blue-500/20",    border: "border-blue-400",    text: "text-blue-300",    hex: "#60a5fa" },
-  ROJO:     { bg: "bg-red-500/20",     border: "border-red-400",     text: "text-red-300",     hex: "#f87171" },
-  VERDE:    { bg: "bg-emerald-500/20", border: "border-emerald-400", text: "text-emerald-300", hex: "#34d399" },
+  ROJO:     { bg: "bg-red-500/20",     border: "border-red-400",     text: "text-red-300",     hex: "#f87171" }, // TL
+  AMARILLO: { bg: "bg-yellow-500/20",  border: "border-yellow-400",  text: "text-yellow-300",  hex: "#facc15" }, // TR
+  VERDE:    { bg: "bg-emerald-500/20", border: "border-emerald-400", text: "text-emerald-300", hex: "#34d399" }, // BL
+  AZUL:     { bg: "bg-blue-500/20",    border: "border-blue-400",    text: "text-blue-300",    hex: "#60a5fa" }, // BR
 };
 export const COLOR_EMOJI: Record<string, string> = {
-  AMARILLO: "🟡", AZUL: "🔵", ROJO: "🔴", VERDE: "🟢",
+  ROJO: "🔴", AMARILLO: "🟡", VERDE: "🟢", AZUL: "🔵",
 };
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
@@ -222,7 +222,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
 
         {/* Centro — tablero */}
         <div className="flex-1 flex items-center justify-center relative">
-          <div className="relative w-full max-w-2xl aspect-square">
+          <div className="relative w-full max-w-2xl aspect-square px-8">
             {/* Las fichas se renderizan sobre el tablero */}
             {gameState && (
               <ParquesPieces
