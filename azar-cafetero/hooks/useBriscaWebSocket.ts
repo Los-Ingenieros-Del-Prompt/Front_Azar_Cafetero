@@ -7,6 +7,7 @@ import SockJS from "sockjs-client";
 export type Suit = "OROS" | "COPAS" | "ESPADAS" | "BASTOS";
 export type Rank = "ACE" | "TWO" | "THREE" | "FOUR" | "FIVE" | "SIX" | "SEVEN" | "JACK" | "HORSE" | "KING";
 export type GameState = "WAITING_FOR_PLAYERS" | "IN_PROGRESS" | "FINISHED";
+export type BotDifficulty = "EASY" | "MEDIUM" | "HARD";
 
 export interface CardDTO {
   suit: Suit;
@@ -250,6 +251,20 @@ export function useBriscaWebSocket(options: UseBriscaWebSocketOptions = {}) {
     });
   }, []);
 
+  // Add a bot to the game
+  const addBot = useCallback((gameId: string, difficulty: BotDifficulty = "MEDIUM") => {
+    const client = clientRef.current;
+    if (!client?.connected) {
+      console.warn("[Brisca WS] Cannot add bot - not connected");
+      return;
+    }
+    console.log("[Brisca WS] Adding bot:", { gameId, difficulty });
+    client.publish({
+      destination: `/app/game/${gameId}/addBot`,
+      body: JSON.stringify({ difficulty }),
+    });
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -270,5 +285,6 @@ export function useBriscaWebSocket(options: UseBriscaWebSocketOptions = {}) {
     startGame,
     playCard,
     requestGameState,
+    addBot,
   };
 }

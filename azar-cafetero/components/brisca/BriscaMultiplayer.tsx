@@ -11,6 +11,7 @@ import {
   CardDTO,
   Suit as BackendSuit,
   Rank as BackendRank,
+  BotDifficulty,
 } from "@/hooks/useBriscaWebSocket";
 import { useBalance } from "@/hooks/useBalance";
 
@@ -282,6 +283,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   const [lastHandResult, setLastHandResult] = useState<HandResult|null>(null);
   const [handHistory, setHandHistory] = useState<HandResult[]>([]);
   const [selectedCardId, setSelectedCardId] = useState<string|null>(null);
+  const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>("MEDIUM");
   const [isAnimatingPlay, setIsAnimatingPlay] = useState(false);
   const [flyingCard, setFlyingCard] = useState<FlyingCardAnimation|null>(null);
   const [opponentFlyingCards, setOpponentFlyingCards] = useState<OverlayCardAnimation[]>([]);
@@ -303,7 +305,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   const BET_AMOUNT = 100;
   const { amount: playerBalance, refreshBalance } = useBalance();
 
-  const { isConnected, connectionStatus, error, gameState, connect, createGame, joinGame, startGame, playCard, requestGameState } =
+  const { isConnected, connectionStatus, error, gameState, connect, createGame, joinGame, startGame, playCard, requestGameState, addBot } =
     useBriscaWebSocket({ onError:(err)=>console.error("[Brisca] Error:",err) });
 
   useEffect(()=>{
@@ -632,6 +634,45 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
                   {playerBalance !== null && playerBalance < BET_AMOUNT ? "Saldo insuficiente" : "¡Iniciar Partida!"}
                 </button>
               </>
+            )}
+            {/* ── BOT SECTION (PBI 144 & 145) ── */}
+            {phase === "waiting" && (
+              <div style={{ marginTop:16,padding:"14px 18px",borderRadius:14,background:"rgba(0,0,0,0.4)",border:`2px dashed rgba(255,209,0,0.35)` }}>
+                <p style={{ color:`${COL.amarillo}`,fontSize:11,letterSpacing:2,textTransform:"uppercase",marginBottom:10,fontWeight:"bold" }}>
+                  🤖 Agregar Bot
+                </p>
+                <div style={{ display:"flex",gap:8,alignItems:"center",flexWrap:"wrap" }}>
+                  <select
+                    value={botDifficulty}
+                    onChange={e => setBotDifficulty(e.target.value as BotDifficulty)}
+                    style={{ background:"rgba(0,48,135,0.8)",color:"white",border:`2px solid ${COL.amarillo}`,borderRadius:8,padding:"7px 12px",fontSize:12,fontFamily:"Georgia,serif",cursor:"pointer",flex:1,minWidth:140 }}
+                  >
+                    <option value="EASY">🟢 Fácil — jugadas aleatorias</option>
+                    <option value="MEDIUM">🟡 Medio — estrategia básica</option>
+                    <option value="HARD">🔴 Difícil — maximiza puntos</option>
+                  </select>
+                  <button
+                    onClick={() => addBot(gameId, botDifficulty)}
+                    disabled={players.length >= 4}
+                    style={{
+                      background: players.length >= 4 ? "rgba(100,100,100,0.5)" : `linear-gradient(135deg, ${COL.rojo}, #8b0000)`,
+                      color:"white", fontWeight:"bold", fontSize:13,
+                      padding:"8px 18px", borderRadius:10,
+                      border:`2px solid ${COL.amarillo}`,
+                      cursor: players.length >= 4 ? "not-allowed" : "pointer",
+                      opacity: players.length >= 4 ? 0.5 : 1,
+                      fontFamily:"Georgia,serif", letterSpacing:1,
+                      boxShadow: players.length >= 4 ? "none" : `0 0 18px rgba(206,17,38,0.5)`,
+                      transition:"all 0.2s",
+                    }}
+                  >
+                    + Agregar Bot
+                  </button>
+                </div>
+                <p style={{ color:"rgba(255,248,231,0.35)",fontSize:10,marginTop:6 }}>
+                  Las ganancias se reducen al 50% en partidas con bots.
+                </p>
+              </div>
             )}
             {!canStart&&players.length<2&&<p style={{ color:`${COL.amarillo}99`,fontSize:13,marginTop:8 }}>Se necesitan al menos 2 jugadores</p>}
             <div style={{ marginTop:20,padding:"14px 18px",borderRadius:12,background:"rgba(0,0,0,0.4)",border:`1px solid rgba(255,209,0,0.18)`,color:"rgba(255,248,231,0.4)",fontSize:11,lineHeight:2,textAlign:"left" }}>
