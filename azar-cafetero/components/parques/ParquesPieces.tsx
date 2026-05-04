@@ -15,87 +15,75 @@ interface ParquesPiecesProps {
  * Casillas 0-67 (recorrido), -1 (cárcel), 68 (meta)
  */
 
-// Generamos el camino de 68 casillas en forma de cruz
-const generatePath = () => {
-  const path: { x: number; y: number }[] = [];
-  const gridSize = 19;
-  const step = 1000 / gridSize;
-  const offset = step / 2;
+/**
+ * TABLA DE COORDENADAS (EDITAR AQUÍ)
+ * El tablero es de 1000x1000.
+ * Ajusta x e y para cada casilla.
+ */
 
-  const add = (x: number, y: number) => {
-    path.push({ x: x * step + offset, y: y * step + offset });
-  };
-
-  /**
-   * Recorrido de 68 casillas (17 por cuadrante)
-   * Rotado para que Yellow (0) empiece en el brazo SUPERIOR (Top Right area)
-   * siguiendo el orden pedido por el usuario.
-   */
-  
-  // CUADRANTE 1 (Arriba -> Derecha) - Salida de Amarillo (0-16)
-  for (let i = 0; i < 8; i++) add(10, i + 1);  // Bajar brazo superior
-  for (let i = 0; i < 8; i++) add(11 + i, 8);  // Ir a la derecha brazo derecho
-  add(18, 9);                                  // Esquina derecha
-
-  // CUADRANTE 2 (Derecha -> Abajo) - Salida de Azul (17-33)
-  for (let i = 0; i < 8; i++) add(17 - i, 10); // Ir a la izquierda brazo derecho
-  for (let i = 0; i < 8; i++) add(10, 11 + i); // Bajar brazo inferior
-  add(9, 18);                                  // Esquina inferior
-
-  // CUADRANTE 3 (Abajo -> Izquierda) - Salida de Verde (34-50)
-  for (let i = 0; i < 8; i++) add(8, 18 - i);  // Subir brazo inferior
-  for (let i = 0; i < 8; i++) add(7 - i, 10); // Ir a la izquierda brazo izquierdo
-  add(0, 9);                                   // Esquina izquierda
-
-  // CUADRANTE 4 (Izquierda -> Arriba) - Salida de Rojo (51-67)
-  for (let i = 0; i < 8; i++) add(i + 1, 8);  // Ir a la derecha brazo izquierdo
-  for (let i = 0; i < 8; i++) add(8, 7 - i);   // Subir brazo superior
-  add(9, 0);                                   // Esquina superior
-
-  return path;
+// Casillas del recorrido (0 a 67)
+const PATH_COORDINATES: Record<number, { x: number; y: number }> = {
+  0: { x: 550, y: 950 }, 1: { x: 0, y: 0 }, 2: { x: 0, y: 0 }, 3: { x: 0, y: 0 }, 4: { x: 0, y: 0 },
+  5: { x: 0, y: 0 }, 6: { x: 0, y: 0 }, 7: { x: 0, y: 0 }, 8: { x: 0, y: 0 }, 9: { x: 0, y: 0 },
+  10: { x: 0, y: 0 }, 11: { x: 0, y: 0 }, 12: { x: 0, y: 0 }, 13: { x: 0, y: 0 }, 14: { x: 0, y: 0 },
+  15: { x: 0, y: 0 }, 16: { x: 0, y: 0 }, 17: { x: 50, y: 550 }, 18: { x: 0, y: 0 }, 19: { x: 0, y: 0 },
+  20: { x: 0, y: 0 }, 21: { x: 0, y: 0 }, 22: { x: 0, y: 0 }, 23: { x: 0, y: 0 }, 24: { x: 0, y: 0 },
+  25: { x: 0, y: 0 }, 26: { x: 0, y: 0 }, 27: { x: 0, y: 0 }, 28: { x: 0, y: 0 }, 29: { x: 0, y: 0 },
+  30: { x: 0, y: 0 }, 31: { x: 0, y: 0 }, 32: { x: 0, y: 0 }, 33: { x: 0, y: 0 }, 34: { x: 450, y: 50 },
+  35: { x: 0, y: 0 }, 36: { x: 0, y: 0 }, 37: { x: 0, y: 0 }, 38: { x: 0, y: 0 }, 39: { x: 0, y: 0 },
+  40: { x: 0, y: 0 }, 41: { x: 0, y: 0 }, 42: { x: 0, y: 0 }, 43: { x: 0, y: 0 }, 44: { x: 0, y: 0 },
+  45: { x: 0, y: 0 }, 46: { x: 0, y: 0 }, 47: { x: 0, y: 0 }, 48: { x: 0, y: 0 }, 49: { x: 0, y: 0 },
+  50: { x: 0, y: 0 }, 51: { x: 950, y: 450 }, 52: { x: 0, y: 0 }, 53: { x: 0, y: 0 }, 54: { x: 0, y: 0 },
+  55: { x: 0, y: 0 }, 56: { x: 0, y: 0 }, 57: { x: 0, y: 0 }, 58: { x: 0, y: 0 }, 59: { x: 0, y: 0 },
+  60: { x: 0, y: 0 }, 61: { x: 0, y: 0 }, 62: { x: 0, y: 0 }, 63: { x: 0, y: 0 }, 64: { x: 0, y: 0 },
+  65: { x: 0, y: 0 }, 66: { x: 0, y: 0 }, 67: { x: 0, y: 0 },
 };
 
-const BOARD_PATH = generatePath();
+// Coordenadas de las cárceles (-1) por color
+const JAIL_COORDINATES: Record<string, { x: number; y: number }> = {
+  "ROJO":     { x: 180, y: 180 }, // Top Left
+  "AMARILLO": { x: 820, y: 180 }, // Top Right
+  "VERDE":    { x: 180, y: 820 }, // Bottom Left
+  "AZUL":     { x: 820, y: 820 }, // Bottom Right
+};
 
+// Coordenadas de las metas (68) por color
+const GOAL_COORDINATES: Record<string, { x: number; y: number }> = {
+  "ROJO":     { x: 400, y: 500 },
+  "AMARILLO": { x: 500, y: 400 },
+  "VERDE":    { x: 500, y: 600 },
+  "AZUL":     { x: 600, y: 500 },
+};
+
+/**
+ * Función que obtiene la posición final.
+ * No necesitas editar esta lógica, solo la tabla de arriba.
+ */
 const getPiecePosition = (absolutePosition: number, color: string, pieceIndex: number): { x: number; y: number } => {
   // 1. CÁRCEL
   if (absolutePosition === -1) {
+    const base = JAIL_COORDINATES[color] || { x: 500, y: 500 };
+    // Offset para que las 4 fichas no se solapen en la cárcel
     const offsets = [
       { dx: -40, dy: -40 }, { dx: 40, dy: -40 },
       { dx: -40, dy: 40 },  { dx: 40, dy: 40 }
     ];
     const off = offsets[pieceIndex % 4];
-    // Layout pedido: TL: Red, TR: Yellow, BL: Green, BR: Blue
-    if (color === "AMARILLO") return { x: 820 + off.dx, y: 180 + off.dy }; // Top Right
-    if (color === "ROJO")     return { x: 180 + off.dx, y: 180 + off.dy }; // Top Left
-    if (color === "VERDE")    return { x: 180 + off.dx, y: 820 + off.dy }; // Bottom Left
-    if (color === "AZUL")     return { x: 820 + off.dx, y: 820 + off.dy }; // Bottom Right
+    return { x: base.x + off.dx, y: base.y + off.dy };
   }
 
   // 2. META
   if (absolutePosition >= 68) {
-    const center = { x: 500, y: 500 };
-    const radius = 60;
-    // Ajuste de ángulos para la meta
-    const angleMap: Record<string, number> = { 
-      "AMARILLO": 270, // Apunta hacia arriba (meta amarilla en TR/Top)
-      "AZUL": 0,       // Apunta a la derecha
-      "VERDE": 90,     // Apunta abajo
-      "ROJO": 180      // Apunta a la izquierda
-    };
-    const baseAngle = angleMap[color] || 0;
-    const angle = (baseAngle + (pieceIndex - 1.5) * 20) * (Math.PI / 180);
-    return {
-      x: center.x + radius * Math.cos(angle),
-      y: center.y + radius * Math.sin(angle)
-    };
+    const base = GOAL_COORDINATES[color] || { x: 500, y: 500 };
+    // Offset ligero para la meta
+    return { x: base.x + (pieceIndex - 1.5) * 10, y: base.y };
   }
 
   // 3. RECORRIDO (0-67)
-  if (absolutePosition >= 0 && absolutePosition < BOARD_PATH.length) {
-    return BOARD_PATH[absolutePosition];
-  }
+  const pos = PATH_COORDINATES[absolutePosition];
+  if (pos) return pos;
 
+  // Si no hay coordenadas definidas para esa casilla, fallback al centro
   return { x: 500, y: 500 };
 };
 
