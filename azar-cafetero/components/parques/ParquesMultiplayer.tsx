@@ -301,14 +301,21 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
             </div>
           )}
 
-          {/* Botón dado */}
+          {/* Botón dado flotante para mayor comodidad */}
           {canRoll && (
-            <button
-              onClick={handleRollDice}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-8 py-3 rounded-xl transition shadow-lg text-xl"
-            >
-              🎲 Lanzar
-            </button>
+            <div className="absolute bottom-24 right-8 z-40 animate-bounce-slow">
+              <button
+                onClick={handleRollDice}
+                className="group relative flex flex-col items-center justify-center w-32 h-32 bg-gradient-to-br from-emerald-500 to-teal-700 hover:from-emerald-400 hover:to-teal-600 text-white rounded-full shadow-[0_0_30px_rgba(16,185,129,0.4)] hover:shadow-[0_0_40px_rgba(16,185,129,0.6)] transition-all duration-300 transform hover:scale-110 active:scale-95 border-4 border-white/20"
+              >
+                <div className="absolute inset-0 rounded-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="text-5xl mb-1 filter drop-shadow-lg">🎲</span>
+                <span className="text-xs font-black uppercase tracking-widest bg-black/20 px-3 py-1 rounded-full">Lanzar</span>
+                
+                {/* Efecto de pulso externo */}
+                <div className="absolute inset-0 rounded-full animate-ping bg-emerald-500/30 -z-10" />
+              </button>
+            </div>
           )}
         </div>
 

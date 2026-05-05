@@ -79,19 +79,15 @@ const getPiecePosition = (absolutePosition: number, color: string, pieceIndex: n
     return { x: base.x + off.dx, y: base.y + off.dy };
   }
 
-  // 2. RECORRIDO COMÚN Y METAS (0-99)
-  let posIndex = absolutePosition;
-  if (absolutePosition >= 68) {
-    if (color === "AMARILLO") posIndex = absolutePosition;
-    if (color === "AZUL") posIndex = absolutePosition + 8;
-    if (color === "VERDE") posIndex = absolutePosition + 16;
-    if (color === "ROJO") posIndex = absolutePosition + 24;
-  }
-
+  // 2. RECORRIDO COMÚN Y METAS (0-97)
+  // El backend ahora envía el índice absoluto final directamente para todas las casillas
+  const posIndex = absolutePosition;
   const pos = PATH_COORDINATES[posIndex];
+
   if (pos) {
-    // Si estamos exactamente en la meta (75), aplicamos un pequeño offset para que las fichas no se sobrepongan totalmente en el centro
-    if (absolutePosition === 75) {
+    // Si estamos exactamente en una meta (70, 78, 89 o 97), aplicamos un pequeño offset para que las fichas no se sobrepongan
+    const isVictory = [70, 78, 89, 97].includes(absolutePosition);
+    if (isVictory) {
       return { x: pos.x + (pieceIndex - 1.5) * 12, y: pos.y + (pieceIndex - 1.5) * 12 };
     }
     return pos;
@@ -150,17 +146,6 @@ export default function ParquesPieces({ gameState, onPieceClick, isMyTurn, movab
               </g>
             );
           })
-        ))}
-
-        {/* 🛠️ DEBUG MODE: Dibuja un punto en cada una de las 100 coordenadas */}
-        {/* Cambia a false cuando termines de ajustar */}
-        {true && Object.entries(PATH_COORDINATES).map(([index, pos]) => (
-          <g key={`debug-${index}`}>
-            <circle cx={pos.x} cy={pos.y} r="8" fill="rgba(255,0,0,0.6)" />
-            <text x={pos.x} y={pos.y + 3} fontSize="10" fill="white" textAnchor="middle" fontWeight="bold">
-              {index}
-            </text>
-          </g>
         ))}
       </svg>
     </div>
