@@ -265,21 +265,36 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
             />
           )}
 
-          {/* Fichas movibles */}
+          {/* Panel flotante de selección de fichas */}
           {gameState.diceRolled && isMyTurn && movablePieces.length > 0 && (
-            <div className="flex gap-2">
-              {movablePieces.map((piece) => (
-                <button
-                  key={piece.id}
-                  onClick={() => handleMovePiece(piece.id)}
-                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold transition"
-                >
-                  Ficha {Number(piece.id.split("-piece-")[1] ?? 0) + 1}
-                  <span className="block text-[10px] opacity-70">
-                    {piece.inJail ? "Cárcel" : `Rel. ${piece.relativePosition}`}
-                  </span>
-                </button>
-              ))}
+            <div className="absolute bottom-60 right-8 z-40 flex flex-col items-end gap-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
+              <p className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-full text-xs font-black uppercase tracking-tighter text-emerald-400 border border-emerald-500/30 shadow-xl">
+                ¿Qué ficha quieres mover?
+              </p>
+              <div className="flex flex-col gap-2">
+                {movablePieces.map((piece) => {
+                  const s = COLOR_STYLES[myPlayer?.color ?? "VERDE"];
+                  return (
+                    <button
+                      key={piece.id}
+                      onClick={() => handleMovePiece(piece.id)}
+                      className={`group flex items-center gap-4 px-6 py-4 ${s.bg} hover:brightness-125 border-2 ${s.border} rounded-2xl shadow-2xl transition-all duration-200 transform hover:-translate-x-2 active:scale-95 min-w-[200px] backdrop-blur-md`}
+                    >
+                      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
+                        <span className="text-xl">{COLOR_EMOJI[myPlayer?.color ?? "VERDE"]}</span>
+                      </div>
+                      <div className="text-left">
+                        <span className={`block font-black text-sm ${s.text} uppercase`}>
+                          Ficha {Number(piece.id.split("-piece-")[1] ?? 0) + 1}
+                        </span>
+                        <span className="text-[10px] text-white/50 font-medium">
+                          {piece.inJail ? "Liberar de la cárcel" : `Mover desde pos. ${piece.relativePosition}`}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
