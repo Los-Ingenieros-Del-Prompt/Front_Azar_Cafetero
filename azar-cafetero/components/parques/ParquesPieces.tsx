@@ -28,7 +28,7 @@ interface ParquesPiecesProps {
 // 84-91: Camino VERDE (Meta en 91)
 // 92-99: Camino ROJO (Meta en 99)
 const PATH_COORDINATES: Record<number, { x: number; y: number }> = {
-  0: { x: 816, y: 447 }, 1: { x: 868, y: 447 }, 2: { x: 921, y: 447 }, 3: { x: 974, y: 447 },
+  0: { x: 830, y: 400 }, 1: { x: 868, y: 447 }, 2: { x: 921, y: 447 }, 3: { x: 974, y: 447 },
   4: { x: 974, y: 500 }, 5: { x: 974, y: 553 }, 6: { x: 921, y: 553 }, 7: { x: 868, y: 553 },
   8: { x: 816, y: 553 }, 9: { x: 763, y: 553 }, 10: { x: 711, y: 553 }, 11: { x: 658, y: 553 },
   12: { x: 605, y: 553 }, 13: { x: 553, y: 605 }, 14: { x: 553, y: 658 }, 15: { x: 553, y: 711 },
@@ -87,12 +87,12 @@ const getPiecePosition = (absolutePosition: number, color: string, pieceIndex: n
     if (color === "VERDE") posIndex = absolutePosition + 16;
     if (color === "ROJO") posIndex = absolutePosition + 24;
   }
-  
+
   const pos = PATH_COORDINATES[posIndex];
   if (pos) {
     // Si estamos exactamente en la meta (75), aplicamos un pequeño offset para que las fichas no se sobrepongan totalmente en el centro
     if (absolutePosition === 75) {
-        return { x: pos.x + (pieceIndex - 1.5) * 12, y: pos.y + (pieceIndex - 1.5) * 12 };
+      return { x: pos.x + (pieceIndex - 1.5) * 12, y: pos.y + (pieceIndex - 1.5) * 12 };
     }
     return pos;
   }
