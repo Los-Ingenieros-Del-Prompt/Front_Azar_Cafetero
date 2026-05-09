@@ -42,7 +42,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
 
   const hasJoinedRef = useRef(false);
 
-  const { isConnected, connectionStatus, error, gameState, connect, subscribeToGame, createGame, joinGame, rollDice, movePiece } =
+  const { isConnected, connectionStatus, error, gameState, connect, subscribeToGame, createGame, joinGame, startGame, rollDice, movePiece } =
     useParquesWebSocket({ onError: (err) => console.error("[Parqués] WS error:", err) });
 
   // 1. Conectar al montar
@@ -67,7 +67,13 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   // ─── Datos derivados ──────────────────────────────────────────────────────
   const isMyTurn = gameState?.currentPlayerId === playerId;
   const myPlayer = gameState?.players.find((p) => p.id === playerId) ?? null;
+  const isHost = gameState?.players[0]?.id === playerId;
   const canRoll = isMyTurn && !gameState?.diceRolled && (gameState?.players.length ?? 0) >= 2;
+
+  // Determinar si estamos en sala de espera
+  const isWaiting = !gameState || 
+                    gameState.state === "WAITING_FOR_PLAYERS" || 
+                    (gameState.state === undefined && gameState.players.length < 2);
 
   // Fichas que se pueden mover después de tirar el dado
   const movablePieces = useMemo<PieceDTO[]>(() => {
@@ -81,6 +87,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
 
   const handleRollDice = () => { if (canRoll) rollDice(gameId, playerId); };
   const handleMovePiece = (pieceId: string) => { if (gameState?.diceRolled && isMyTurn) movePiece(gameId, playerId, pieceId); };
+  const handleStartGame = () => { if (isHost) startGame(gameId); };
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PANTALLA: Conectando
@@ -107,42 +114,120 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   // ═══════════════════════════════════════════════════════════════════════════
   // PANTALLA: Sala de espera
   // ═══════════════════════════════════════════════════════════════════════════
-  if (!gameState || gameState.players.length < 2) {
+  if (isWaiting) {
+    const playersCount = gameState?.players.length ?? 1;
+    const canStart = playersCount >= 2;
+
     return (
       <div className="relative min-h-screen w-full text-white overflow-hidden" style={{ background: "#0a1f0a" }}>
         <ParquesBoard />
         <GameControls onMenu={() => router.push("/lobby")} onExit={() => router.push("/")} />
-        {/* ▼ DISEÑO LIBRE ▼ */}
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <div className="text-center p-10 rounded-2xl border-2 border-emerald-500/40 bg-black/80 max-w-md w-full mx-4">
-            <div className="text-5xl mb-4">🎲</div>
-            <h1 className="text-4xl font-black text-emerald-400 tracking-wider mb-1">PARQUÉS</h1>
-            <p className="text-white/40 text-xs mb-6 tracking-widest uppercase">Mesa: {gameId}</p>
-            <div className="mb-6">
-              <p className="text-white/40 text-xs uppercase tracking-widest mb-3">
-                Jugadores ({gameState?.players.length ?? 1}/4)
-              </p>
-              <div className="flex flex-col gap-2">
-                {(gameState?.players ?? []).map((p: PlayerDTO) => {
-                  const s = COLOR_STYLES[p.color] ?? COLOR_STYLES.VERDE;
+        
+        {/* Decorative elements */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 z-0" />
+        
+        <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+          <div className="text-center p-8 md:p-12 rounded-[2.5rem] border-2 border-emerald-500/30 bg-black/85 backdrop-blur-xl max-w-xl w-full shadow-[0_0_50px_rgba(16,185,129,0.2)] animate-in fade-in zoom-in duration-500">
+            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-emerald-500/10 border-2 border-emerald-500/20 mb-8 animate-pulse">
+              <span className="text-6xl">🎲</span>
+            </div>
+            
+            <h1 className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300 tracking-tighter mb-2">
+              PARQUÉS
+            </h1>
+            <p className="text-emerald-500/60 text-xs font-black tracking-[0.4em] uppercase mb-10">
+              Mesa: {gameId}
+            </p>
+
+            <div className="mb-10 text-left">
+              <div className="flex items-center justify-between mb-4 px-2">
+                <p className="text-white/40 text-xs uppercase tracking-widest font-bold">
+                  Jugadores en línea
+                </p>
+                <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-500/30">
+                  {playersCount}/4
+                </span>
+              </div>
+              
+              <div className="grid gap-3">
+                {(gameState?.players ?? [{ id: playerId, name: playerName, color: "VERDE" as const }]).map((p: any) => {
+                  const s = COLOR_STYLES[p.color] || COLOR_STYLES.VERDE;
                   return (
-                    <div key={p.id} className={`flex items-center justify-between px-4 py-3 rounded-xl border ${s.border} ${s.bg}`}>
-                      <span className={`font-bold text-sm ${s.text}`}>
-                        {COLOR_EMOJI[p.color]} {p.name}{p.id === playerId && " (Tú)"}
-                      </span>
-                      <div className="w-2 h-2 rounded-full bg-green-400" />
+                    <div 
+                      key={p.id} 
+                      className={`group flex items-center justify-between px-5 py-4 rounded-2xl border ${s.border}/40 ${s.bg} backdrop-blur-md transition-all hover:scale-[1.02]`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-black/40 border border-white/10 flex items-center justify-center text-xl shadow-inner">
+                          {COLOR_EMOJI[p.color] || "👤"}
+                        </div>
+                        <div>
+                          <span className={`font-black text-sm ${s.text} tracking-tight`}>
+                            {p.name}
+                          </span>
+                          <p className="text-[10px] text-white/30 font-bold uppercase tracking-wider">
+                            {p.id === playerId ? "¡Eres tú!" : "Listo para jugar"}
+                          </p>
+                        </div>
+                      </div>
+                      {p.id === (gameState?.players[0]?.id ?? playerId) && (
+                        <span className="text-[10px] font-black text-yellow-500/80 bg-yellow-500/10 px-2 py-1 rounded-md border border-yellow-500/20 uppercase tracking-tighter">
+                          Host ⭐
+                        </span>
+                      )}
                     </div>
                   );
                 })}
-                <div className="px-4 py-3 rounded-xl border border-dashed border-white/20 text-white/30 text-sm">
-                  Esperando más jugadores...
-                </div>
+                
+                {playersCount < 4 && (
+                  <div className="px-5 py-4 rounded-2xl border border-dashed border-white/10 bg-white/5 flex items-center gap-4 opacity-50">
+                    <div className="w-10 h-10 rounded-full border border-dashed border-white/20 flex items-center justify-center text-white/20">
+                      ?
+                    </div>
+                    <span className="text-sm font-medium text-white/30 italic">Esperando a la banda...</span>
+                  </div>
+                )}
               </div>
             </div>
-            <p className="text-white/30 text-sm">Se necesitan al menos 2 jugadores para iniciar</p>
+
+            <div className="space-y-4">
+              {isHost ? (
+                <button
+                  onClick={handleStartGame}
+                  disabled={!canStart}
+                  className={`w-full group relative overflow-hidden py-5 rounded-2xl font-black text-sm uppercase tracking-[0.2em] transition-all duration-300 shadow-2xl ${
+                    canStart 
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:scale-[1.03] active:scale-95 shadow-emerald-500/25" 
+                      : "bg-white/10 text-white/20 cursor-not-allowed"
+                  }`}
+                >
+                  {canStart ? (
+                    <>
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        Iniciar Partida
+                        <div className="w-2 h-2 rounded-full bg-white animate-ping" />
+                      </span>
+                      <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                    </>
+                  ) : (
+                    "Faltan jugadores"
+                  )}
+                </button>
+              ) : (
+                <div className="w-full py-5 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 text-emerald-400/80 font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-3">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Esperando a que el host inicie...
+                </div>
+              )}
+              
+              {!canStart && (
+                <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest">
+                  Se requieren al menos 2 jugadores para empezar la rumba
+                </p>
+              )}
+            </div>
           </div>
         </div>
-        {/* ▲ DISEÑO LIBRE ▲ */}
       </div>
     );
   }

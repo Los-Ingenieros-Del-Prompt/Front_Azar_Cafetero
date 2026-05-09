@@ -13,6 +13,8 @@ export interface PieceDTO {
   atHome: boolean;
 }
 
+export type GameState = "WAITING_FOR_PLAYERS" | "IN_PROGRESS" | "FINISHED";
+
 export interface PlayerDTO {
   id: string;
   name: string;
@@ -24,6 +26,7 @@ export interface PlayerDTO {
 
 export interface GameStateDTO {
   gameId: string;
+  state?: GameState; // Added state field
   currentPlayerId: string;
   die1: number;
   die2: number;
@@ -206,6 +209,17 @@ const joinGame = useCallback((gameId: string, playerId: string, playerName: stri
     });
   }, []);
 
+  // ── Iniciar juego ─────────────────────────────────────────────────────────
+  const startGame = useCallback((gameId: string) => {
+    const client = clientRef.current;
+    if (!client?.connected) return;
+
+    client.publish({
+      destination: `/app/game/${gameId}/start`,
+      body: JSON.stringify({ gameId }),
+    });
+  }, []);
+
   // ── Mover ficha ───────────────────────────────────────────────────────────
   // Destino: /app/game/{gameId}/move
   // Payload: { playerId, pieceId }
@@ -236,7 +250,8 @@ const joinGame = useCallback((gameId: string, playerId: string, playerName: stri
   disconnect,
   subscribeToGame,
   createGame,
-  joinGame,   // ← agregar
+  joinGame,
+  startGame,  // Added startGame
   rollDice,
   movePiece,
 };
