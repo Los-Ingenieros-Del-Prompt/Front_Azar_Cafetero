@@ -338,8 +338,12 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
           </span>
         </div>
 
+        {/* 🎲 ANIMACIÓN DE DADOS (ZONA CENTRAL) 🎲 */}
+        <DiceReveal die1={gameState.die1} die2={gameState.die2} active={gameState.diceRolled} />
+
         {/* Barra inferior */}
         <div className="flex items-center justify-between px-6 py-3 bg-black/50 border-t border-white/10 pl-20 gap-4">
+
           {myPlayer && (
             <MyPlayerBadge
               player={myPlayer}
@@ -457,6 +461,78 @@ function MyPlayerBadge({ player, isLeader, die1, die2, diceRolled }: {
       {isLeader && <span className="text-xs">⭐</span>}
     </div>
   );
+}
+
+function DiceReveal({ die1, die2, active }: { die1: number; die2: number; active: boolean }) {
+  const [show, setShow] = useState(false);
+  const [rolling, setRolling] = useState(false);
+
+  useEffect(() => {
+    if (active) {
+      setShow(true);
+      setRolling(true);
+      const timer = setTimeout(() => setRolling(false), 1000); // 1s de "giro"
+      return () => clearTimeout(timer);
+    } else {
+      setShow(false);
+    }
+  }, [active]);
+
+  if (!show) return null;
+
+  return (
+    <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
+      <div className="flex gap-8 items-center animate-in zoom-in fade-in duration-500">
+        <DiceBox value={die1} rolling={rolling} delay="0s" />
+        <DiceBox value={die2} rolling={rolling} delay="0.1s" />
+        
+        {/* Banner de par si aplica */}
+        {!rolling && die1 === die2 && die1 > 0 && (
+          <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 bg-yellow-500 text-black font-black px-6 py-2 rounded-full shadow-[0_0_30px_rgba(234,179,8,0.5)] animate-bounce text-xl tracking-widest">
+            ¡PAREJA!
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DiceBox({ value, rolling, delay }: { value: number; rolling: boolean; delay: string }) {
+  return (
+    <div 
+      className={`relative w-32 h-32 flex items-center justify-center bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-b-8 border-slate-300 transition-all duration-500 ${rolling ? "animate-spin-dice" : "scale-125"}`}
+      style={{ animationDelay: delay }}
+    >
+      {/* Brillo interno */}
+      <div className="absolute inset-2 border-2 border-slate-100 rounded-2xl opacity-50" />
+      
+      {/* Puntos del dado */}
+      <div className="grid grid-cols-3 grid-rows-3 gap-2 w-20 h-20">
+        {getDiceDots(rolling ? Math.floor(Math.random() * 6) + 1 : value).map((dot, i) => (
+          <div 
+            key={i} 
+            className={`w-full h-full rounded-full ${dot ? "bg-slate-900 shadow-inner" : "bg-transparent"}`} 
+          />
+        ))}
+      </div>
+
+      {/* Sombra proyectada */}
+      {!rolling && (
+        <div className="absolute -bottom-12 w-full h-4 bg-black/40 blur-xl rounded-full scale-150" />
+      )}
+    </div>
+  );
+}
+
+function getDiceDots(n: number): boolean[] {
+  const dots = new Array(9).fill(false);
+  if (n === 1) dots[4] = true;
+  if (n === 2) { dots[0] = true; dots[8] = true; }
+  if (n === 3) { dots[0] = true; dots[4] = true; dots[8] = true; }
+  if (n === 4) { dots[0] = true; dots[2] = true; dots[6] = true; dots[8] = true; }
+  if (n === 5) { dots[0] = true; dots[2] = true; dots[4] = true; dots[6] = true; dots[8] = true; }
+  if (n === 6) { dots[0] = true; dots[2] = true; dots[3] = true; dots[5] = true; dots[6] = true; dots[8] = true; }
+  return dots;
 }
 
 function getDiceEmoji(n: number): string {

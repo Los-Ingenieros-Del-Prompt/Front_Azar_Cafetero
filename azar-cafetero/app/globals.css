@@ -33,4 +33,15 @@ body {
   .animate-bounce-slow {
     animation: bounce-slow 3s ease-in-out infinite;
   }
+  @keyframes spin-dice {
+    0% { transform: rotate(0deg) scale(1); }
+    20% { transform: rotate(90deg) scale(1.1) translateX(5px); }
+    40% { transform: rotate(180deg) scale(1) translateY(-5px); }
+    60% { transform: rotate(270deg) scale(1.1) translateX(-5px); }
+    80% { transform: rotate(320deg) scale(1) translateY(5px); }
+    100% { transform: rotate(360deg) scale(1); }
+  }
+  .animate-spin-dice {
+    animation: spin-dice 0.2s linear infinite;
+  }
 }
