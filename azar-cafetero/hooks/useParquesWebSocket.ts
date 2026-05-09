@@ -30,6 +30,8 @@ export interface GameStateDTO {
   currentPlayerId: string;
   die1: number;
   die2: number;
+  die1Used: boolean;
+  die2Used: boolean;
   moveValue: number;
   diceRolled: boolean;
   jailExitAvailable: boolean;
@@ -224,13 +226,13 @@ const joinGame = useCallback((gameId: string, playerId: string, playerName: stri
   // Destino: /app/game/{gameId}/move
   // Payload: { playerId, pieceId }
   // Broadcast: /topic/game/{gameId}
-  const movePiece = useCallback((gameId: string, playerId: string, pieceId: string) => {
+  const movePiece = useCallback((gameId: string, playerId: string, pieceId: string, diceSelection: number) => {
     const client = clientRef.current;
     if (!client?.connected) return;
 
     client.publish({
       destination: `/app/game/${gameId}/move`,
-      body: JSON.stringify({ playerId, pieceId }),
+      body: JSON.stringify({ playerId, pieceId, diceSelection }),
     });
   }, []);
 
