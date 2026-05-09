@@ -39,7 +39,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   const [playerId] = useState(() => userId || user?.userId || `player-${Math.random().toString(36).slice(2, 8)}`);
   const [playerName] = useState(() => userName || user?.name || `Jugador${Math.floor(Math.random() * 1000)}`);
   const [gameId] = useState(() => propGameId || "parques-game-1");
-
+  const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
   const hasJoinedRef = useRef(false);
 
   const { isConnected, connectionStatus, error, gameState, connect, subscribeToGame, createGame, joinGame, startGame, rollDice, movePiece } =
@@ -78,15 +78,46 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   // Fichas que se pueden mover después de tirar el dado
   const movablePieces = useMemo<PieceDTO[]>(() => {
     if (!gameState?.diceRolled || !isMyTurn || !myPlayer) return [];
+    const d1Available = !gameState.die1Used;
+    const d2Available = !gameState.die2Used;
+    
     return myPlayer.pieces.filter((piece) => {
       if (piece.atHome) return false;
-      if (piece.inJail) return gameState.jailExitAvailable;
-      return piece.relativePosition + gameState.moveValue <= 68;
+      if (piece.inJail) return gameState.jailExitAvailable && (d1Available || d2Available);
+      
+      const canMoveD1 = d1Available && piece.relativePosition + gameState.die1 <= 68;
+      const canMoveD2 = d2Available && piece.relativePosition + gameState.die2 <= 68;
+      const canMoveSum = d1Available && d2Available && piece.relativePosition + (gameState.die1 + gameState.die2) <= 68;
+      
+      return canMoveD1 || canMoveD2 || canMoveSum;
     });
   }, [gameState, isMyTurn, myPlayer]);
 
   const handleRollDice = () => { if (canRoll) rollDice(gameId, playerId); };
-  const handleMovePiece = (pieceId: string) => { if (gameState?.diceRolled && isMyTurn) movePiece(gameId, playerId, pieceId); };
+  
+  const handlePieceClick = (pieceId: string) => {
+    if (!gameState?.diceRolled || !isMyTurn) return;
+    
+    const d1Available = !gameState.die1Used;
+    const d2Available = !gameState.die2Used;
+    
+    // Si solo hay un dado disponible, mover directamente
+    if (d1Available && !d2Available) {
+      movePiece(gameId, playerId, pieceId, 1);
+    } else if (!d1Available && d2Available) {
+      movePiece(gameId, playerId, pieceId, 2);
+    } else {
+      // Ambos disponibles, abrir menú de selección
+      setSelectedPieceId(pieceId);
+    }
+  };
+
+  const handleSelectDice = (selection: number) => {
+    if (selectedPieceId && isMyTurn) {
+      movePiece(gameId, playerId, selectedPieceId, selection);
+      setSelectedPieceId(null);
+    }
+  };
   const handleStartGame = () => { if (isHost) startGame(gameId); };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -314,8 +345,51 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
                 gameState={gameState}
                 isMyTurn={isMyTurn}
                 movablePieceIds={movablePieces.map(p => p.id)}
-                onPieceClick={handleMovePiece}
+                onPieceClick={handlePieceClick}
               />
+            )}
+
+            {/* Menú de selección de dados */}
+            {selectedPieceId && (
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+                <div className="bg-slate-900 border-2 border-white/20 p-6 rounded-[2rem] shadow-2xl animate-in zoom-in duration-200 flex flex-col gap-4">
+                  <p className="text-center font-black uppercase tracking-widest text-xs text-white/60 mb-2">
+                    ¿Cómo quieres mover esta ficha?
+                  </p>
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={() => handleSelectDice(1)}
+                      className="flex flex-col items-center gap-2 p-4 bg-white/10 hover:bg-white/20 rounded-2xl border border-white/10 transition-all group"
+                    >
+                      <span className="text-4xl group-hover:scale-110 transition-transform">{getDiceEmoji(gameState.die1)}</span>
+                      <span className="text-[10px] font-bold">Mover {gameState.die1}</span>
+                    </button>
+                    <button 
+                      onClick={() => handleSelectDice(2)}
+                      className="flex flex-col items-center gap-2 p-4 bg-white/10 hover:bg-white/20 rounded-2xl border border-white/10 transition-all group"
+                    >
+                      <span className="text-4xl group-hover:scale-110 transition-transform">{getDiceEmoji(gameState.die2)}</span>
+                      <span className="text-[10px] font-bold">Mover {gameState.die2}</span>
+                    </button>
+                    <button 
+                      onClick={() => handleSelectDice(3)}
+                      className="flex flex-col items-center gap-2 p-4 bg-emerald-500/20 hover:bg-emerald-500/30 rounded-2xl border border-emerald-500/30 transition-all group"
+                    >
+                      <div className="flex gap-1 group-hover:scale-110 transition-transform">
+                        <span className="text-3xl">{getDiceEmoji(gameState.die1)}</span>
+                        <span className="text-3xl">{getDiceEmoji(gameState.die2)}</span>
+                      </div>
+                      <span className="text-[10px] font-black text-emerald-400">Sumar {gameState.die1 + gameState.die2}</span>
+                    </button>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedPieceId(null)}
+                    className="mt-2 text-[10px] font-bold text-white/30 hover:text-white/60 uppercase tracking-widest"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -339,7 +413,13 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
         </div>
 
         {/* 🎲 ANIMACIÓN DE DADOS (ZONA CENTRAL) 🎲 */}
-        <DiceReveal die1={gameState.die1} die2={gameState.die2} active={gameState.diceRolled} />
+        <DiceReveal 
+          die1={gameState.die1} 
+          die2={gameState.die2} 
+          die1Used={gameState.die1Used}
+          die2Used={gameState.die2Used}
+          active={gameState.diceRolled} 
+        />
 
         {/* Barra inferior */}
         <div className="flex items-center justify-between px-6 py-3 bg-black/50 border-t border-white/10 pl-20 gap-4">
@@ -366,7 +446,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
                   return (
                     <button
                       key={piece.id}
-                      onClick={() => handleMovePiece(piece.id)}
+                      onClick={() => handlePieceClick(piece.id)}
                       className={`group flex items-center gap-4 px-6 py-4 ${s.bg} hover:brightness-125 border-2 ${s.border} rounded-2xl shadow-2xl transition-all duration-200 transform hover:-translate-x-2 active:scale-95 min-w-[200px] backdrop-blur-md`}
                     >
                       <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
@@ -463,7 +543,9 @@ function MyPlayerBadge({ player, isLeader, die1, die2, diceRolled }: {
   );
 }
 
-function DiceReveal({ die1, die2, active }: { die1: number; die2: number; active: boolean }) {
+function DiceReveal({ die1, die2, die1Used, die2Used, active }: { 
+  die1: number; die2: number; die1Used: boolean; die2Used: boolean; active: boolean 
+}) {
   const [show, setShow] = useState(false);
   const [rolling, setRolling] = useState(false);
 
@@ -483,8 +565,8 @@ function DiceReveal({ die1, die2, active }: { die1: number; die2: number; active
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
       <div className="flex gap-8 items-center animate-in zoom-in fade-in duration-500">
-        <DiceBox value={die1} rolling={rolling} delay="0s" />
-        <DiceBox value={die2} rolling={rolling} delay="0.1s" />
+        <DiceBox value={die1} rolling={rolling} used={die1Used} delay="0s" />
+        <DiceBox value={die2} rolling={rolling} used={die2Used} delay="0.1s" />
         
         {/* Banner de par si aplica */}
         {!rolling && die1 === die2 && die1 > 0 && (
@@ -497,10 +579,10 @@ function DiceReveal({ die1, die2, active }: { die1: number; die2: number; active
   );
 }
 
-function DiceBox({ value, rolling, delay }: { value: number; rolling: boolean; delay: string }) {
+function DiceBox({ value, rolling, used, delay }: { value: number; rolling: boolean; used: boolean; delay: string }) {
   return (
     <div 
-      className={`relative w-32 h-32 flex items-center justify-center bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-b-8 border-slate-300 transition-all duration-500 ${rolling ? "animate-spin-dice" : "scale-125"}`}
+      className={`relative w-32 h-32 flex items-center justify-center bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-b-8 border-slate-300 transition-all duration-500 ${rolling ? "animate-spin-dice" : "scale-125"} ${used ? "opacity-30 grayscale scale-100" : ""}`}
       style={{ animationDelay: delay }}
     >
       {/* Brillo interno */}
