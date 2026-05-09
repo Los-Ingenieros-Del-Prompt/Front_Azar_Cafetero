@@ -349,44 +349,44 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
               />
             )}
 
-            {/* Menú de selección de dados */}
+            {/* Menú de selección de dados (UBICACIÓN INFERIOR) */}
             {selectedPieceId && (
-              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
-                <div className="bg-slate-900 border-2 border-white/20 p-6 rounded-[2rem] shadow-2xl animate-in zoom-in duration-200 flex flex-col gap-4">
-                  <p className="text-center font-black uppercase tracking-widest text-xs text-white/60 mb-2">
-                    ¿Cómo quieres mover esta ficha?
+              <div className="absolute bottom-32 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-10 duration-300">
+                <div className="bg-slate-900/90 border-2 border-emerald-500/30 p-5 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl flex flex-col gap-3 min-w-[320px]">
+                  <p className="text-center font-black uppercase tracking-[0.2em] text-[10px] text-emerald-400 mb-1">
+                    ¿Cómo quieres mover la ficha?
                   </p>
-                  <div className="flex gap-4">
+                  <div className="flex gap-3 justify-center">
                     <button 
                       onClick={() => handleSelectDice(1)}
-                      className="flex flex-col items-center gap-2 p-4 bg-white/10 hover:bg-white/20 rounded-2xl border border-white/10 transition-all group"
+                      className="flex-1 flex flex-col items-center gap-2 p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all group"
                     >
-                      <span className="text-4xl group-hover:scale-110 transition-transform">{getDiceEmoji(gameState.die1)}</span>
-                      <span className="text-[10px] font-bold">Mover {gameState.die1}</span>
+                      <span className="text-3xl group-hover:scale-110 transition-transform">{getDiceEmoji(gameState.die1)}</span>
+                      <span className="text-[10px] font-bold text-white/70">Mover {gameState.die1}</span>
                     </button>
                     <button 
                       onClick={() => handleSelectDice(2)}
-                      className="flex flex-col items-center gap-2 p-4 bg-white/10 hover:bg-white/20 rounded-2xl border border-white/10 transition-all group"
+                      className="flex-1 flex flex-col items-center gap-2 p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all group"
                     >
-                      <span className="text-4xl group-hover:scale-110 transition-transform">{getDiceEmoji(gameState.die2)}</span>
-                      <span className="text-[10px] font-bold">Mover {gameState.die2}</span>
+                      <span className="text-3xl group-hover:scale-110 transition-transform">{getDiceEmoji(gameState.die2)}</span>
+                      <span className="text-[10px] font-bold text-white/70">Mover {gameState.die2}</span>
                     </button>
                     <button 
                       onClick={() => handleSelectDice(3)}
-                      className="flex flex-col items-center gap-2 p-4 bg-emerald-500/20 hover:bg-emerald-500/30 rounded-2xl border border-emerald-500/30 transition-all group"
+                      className="flex-1 flex flex-col items-center gap-2 p-3 bg-emerald-500/20 hover:bg-emerald-500/30 rounded-2xl border border-emerald-500/40 transition-all group"
                     >
-                      <div className="flex gap-1 group-hover:scale-110 transition-transform">
-                        <span className="text-3xl">{getDiceEmoji(gameState.die1)}</span>
-                        <span className="text-3xl">{getDiceEmoji(gameState.die2)}</span>
+                      <div className="flex gap-0.5 group-hover:scale-110 transition-transform">
+                        <span className="text-2xl">{getDiceEmoji(gameState.die1)}</span>
+                        <span className="text-2xl">{getDiceEmoji(gameState.die2)}</span>
                       </div>
-                      <span className="text-[10px] font-black text-emerald-400">Sumar {gameState.die1 + gameState.die2}</span>
+                      <span className="text-[10px] font-black text-emerald-400 uppercase">Suma {gameState.die1 + gameState.die2}</span>
                     </button>
                   </div>
                   <button 
                     onClick={() => setSelectedPieceId(null)}
-                    className="mt-2 text-[10px] font-bold text-white/30 hover:text-white/60 uppercase tracking-widest"
+                    className="text-[9px] font-black text-white/20 hover:text-red-400 uppercase tracking-[0.3em] transition-colors mt-1"
                   >
-                    Cancelar
+                    [ Cancelar Selección ]
                   </button>
                 </div>
               </div>
