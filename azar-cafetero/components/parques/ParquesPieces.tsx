@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { GameStateDTO, PlayerDTO, PieceDTO } from "@/hooks/useParquesWebSocket";
 import { COLOR_STYLES } from "./ParquesMultiplayer";
 
@@ -10,23 +10,6 @@ interface ParquesPiecesProps {
   movablePieceIds: string[];
 }
 
-/**
- * Mapeo de coordenadas para un tablero de Parqués estándar (1000x1000)
- * Casillas 0-67 (recorrido), -1 (cárcel), 68 (meta)
- */
-
-/**
- * TABLA DE COORDENADAS (EDITAR AQUÍ)
- * El tablero es de 1000x1000.
- * Ajusta x e y para cada casilla.
- */
-
-// Casillas del recorrido y meta (0 a 99).
-// 0-67: Recorrido común
-// 68-75: Camino AMARILLO (Meta en 75)
-// 76-83: Camino AZUL (Meta en 83)
-// 84-91: Camino VERDE (Meta en 91)
-// 92-99: Camino ROJO (Meta en 99)
 const PATH_COORDINATES: Record<number, { x: number; y: number }> = {
   0: { x: 785, y: 380 }, 1: { x: 740, y: 380 }, 2: { x: 695, y: 380 }, 3: { x: 650, y: 380 },
   4: { x: 605, y: 345 }, 5: { x: 605, y: 295 }, 6: { x: 605, y: 250 }, 7: { x: 605, y: 205 },
@@ -48,104 +31,138 @@ const PATH_COORDINATES: Record<number, { x: number; y: number }> = {
   68: { x: 700, y: 500 }, 69: { x: 655, y: 500 }, 70: { x: 600, y: 500 }, 71: { x: 500, y: 925 },
   72: { x: 500, y: 880 }, 73: { x: 500, y: 835 }, 74: { x: 500, y: 790 }, 75: { x: 500, y: 745 },
   76: { x: 500, y: 700 }, 77: { x: 500, y: 655 }, 78: { x: 500, y: 600 }, 79: { x: 115, y: 500 },
-  80: { x: 160, y: 500 }, 81: { x: 205, y: 500 }, 82: { x: 250, y: 500 }, 83: { x: 295, y: 500 }, // Corregido: la meta azul cae en 500,500
+  80: { x: 160, y: 500 }, 81: { x: 205, y: 500 }, 82: { x: 250, y: 500 }, 83: { x: 295, y: 500 },
   84: { x: 500, y: 160 }, 85: { x: 500, y: 205 }, 86: { x: 500, y: 250 }, 87: { x: 500, y: 295 },
   88: { x: 340, y: 500 }, 89: { x: 400, y: 500 }, 90: { x: 500, y: 70 }, 91: { x: 500, y: 115 },
   92: { x: 500, y: 160 }, 93: { x: 500, y: 205 }, 94: { x: 500, y: 250 }, 95: { x: 500, y: 295 },
   96: { x: 500, y: 340 }, 97: { x: 500, y: 400 }
 };
 
-// Coordenadas de las cárceles (-1) por color
 const JAIL_COORDINATES: Record<string, { x: number; y: number }> = {
-  "ROJO": { x: 200, y: 200 }, // Top Left
-  "AMARILLO": { x: 830, y: 200 }, // Top Right
-  "VERDE": { x: 200, y: 830 }, // Bottom Left
-  "AZUL": { x: 830, y: 830 }, // Bottom Right
+  "ROJO": { x: 200, y: 200 },
+  "AMARILLO": { x: 830, y: 200 },
+  "VERDE": { x: 200, y: 830 },
+  "AZUL": { x: 830, y: 830 },
 };
 
-/**
- * Función que obtiene la posición final.
- */
-const getPiecePosition = (absolutePosition: number, color: string, pieceIndex: number): { x: number; y: number } => {
-  // 1. CÁRCEL
-  if (absolutePosition === -1) {
+const getExitAbsPos = (color: string) => {
+  switch (color) {
+    case "AMARILLO": return 0;
+    case "AZUL": return 49;
+    case "VERDE": return 32;
+    case "ROJO": return 17;
+    default: return 0;
+  }
+};
+
+const getAbsFromRel = (relPos: number, color: string) => {
+  if (relPos < 0) return -1;
+  const exitAbs = getExitAbsPos(color);
+  if (relPos < 64) return (exitAbs + relPos) % 64;
+  const ladderRel = relPos - 64;
+  switch (color) {
+    case "AMARILLO": return 64 + ladderRel;
+    case "AZUL": return 71 + ladderRel;
+    case "VERDE": return 79 + ladderRel;
+    case "ROJO": return 90 + ladderRel;
+    default: return relPos;
+  }
+};
+
+const getCoords = (absPos: number, color: string, pieceIndex: number) => {
+  if (absPos === -1) {
     const base = JAIL_COORDINATES[color] || { x: 500, y: 500 };
-    // Offset para que las 4 fichas no se solapen en la cárcel
-    const offsets = [
-      { dx: -40, dy: -40 }, { dx: 40, dy: -40 },
-      { dx: -40, dy: 40 }, { dx: 40, dy: 40 }
-    ];
+    const offsets = [{ dx: -40, dy: -40 }, { dx: 40, dy: -40 }, { dx: -40, dy: 40 }, { dx: 40, dy: 40 }];
     const off = offsets[pieceIndex % 4];
     return { x: base.x + off.dx, y: base.y + off.dy };
   }
-
-  // 2. RECORRIDO COMÚN Y METAS (0-97)
-  // El backend ahora envía el índice absoluto final directamente para todas las casillas
-  const posIndex = absolutePosition;
-  const pos = PATH_COORDINATES[posIndex];
-
-  if (pos) {
-    // Si estamos exactamente en una meta (70, 78, 89 o 97), aplicamos un pequeño offset para que las fichas no se sobrepongan
-    const isVictory = [70, 78, 89, 97].includes(absolutePosition);
-    if (isVictory) {
-      return { x: pos.x + (pieceIndex - 1.5) * 12, y: pos.y + (pieceIndex - 1.5) * 12 };
-    }
-    return pos;
-  }
-
-  // Si no hay coordenadas definidas para esa casilla, fallback al centro
-  return { x: 500, y: 500 };
+  const pos = PATH_COORDINATES[absPos] || { x: 500, y: 500 };
+  const isVictory = [70, 78, 89, 97].includes(absPos);
+  if (isVictory) return { x: pos.x + (pieceIndex - 1.5) * 12, y: pos.y + (pieceIndex - 1.5) * 12 };
+  return pos;
 };
+
+function AnimatedPiece({ piece, color, idx, isMovable, onClick }: { 
+  piece: PieceDTO, color: string, idx: number, isMovable: boolean, onClick: () => void 
+}) {
+  const [displayAbsPos, setDisplayAbsPos] = useState(piece.absolutePosition);
+  const lastRelPos = useRef(piece.relativePosition);
+  const moving = useRef(false);
+
+  useEffect(() => {
+    if (piece.relativePosition !== lastRelPos.current) {
+      const start = lastRelPos.current;
+      const end = piece.relativePosition;
+      
+      // Si es un salto grande (cárcel o salida), teletransportar
+      if (start === -1 || end === -1 || Math.abs(end - start) > 12) {
+        setDisplayAbsPos(piece.absolutePosition);
+      } else {
+        // Animación paso a paso
+        moving.current = true;
+        let current = start;
+        const interval = setInterval(() => {
+          if (current < end) current++;
+          else if (current > end) current--;
+          
+          setDisplayAbsPos(getAbsFromRel(current, color));
+          
+          if (current === end) {
+            clearInterval(interval);
+            moving.current = false;
+          }
+        }, 150);
+        return () => clearInterval(interval);
+      }
+      lastRelPos.current = end;
+    } else {
+        setDisplayAbsPos(piece.absolutePosition);
+    }
+  }, [piece.relativePosition, piece.absolutePosition, color]);
+
+  const { x, y } = getCoords(displayAbsPos, color, idx);
+  const colorStyle = COLOR_STYLES[color];
+
+  return (
+    <g
+      className={`transition-all duration-300 ease-out ${isMovable ? "pointer-events-auto cursor-pointer" : ""}`}
+      onClick={onClick}
+    >
+      <circle cx={x} cy={y + 5} r="18" fill="black" fillOpacity="0.3" />
+      <circle
+        cx={x} cy={y} r="18"
+        fill={colorStyle.hex}
+        stroke="white" strokeWidth="3"
+        className={isMovable ? "animate-pulse" : ""}
+      />
+      <circle cx={x - 5} cy={y - 5} r="6" fill="white" fillOpacity="0.4" />
+      {isMovable && (
+        <circle
+          cx={x} cy={y} r="25"
+          fill="none" stroke="white" strokeWidth="2"
+          strokeDasharray="4 4"
+          className="animate-[spin_4s_linear_infinite]"
+        />
+      )}
+    </g>
+  );
+}
 
 export default function ParquesPieces({ gameState, onPieceClick, isMyTurn, movablePieceIds }: ParquesPiecesProps) {
   return (
     <div className="absolute inset-0 pointer-events-none z-20">
       <svg viewBox="0 0 1000 1000" className="w-full h-full">
         {gameState.players.map((player) => (
-          player.pieces.map((piece, idx) => {
-            const { x, y } = getPiecePosition(piece.absolutePosition, player.color, idx);
-            const isMovable = isMyTurn && movablePieceIds.includes(piece.id);
-            const colorStyle = COLOR_STYLES[player.color];
-
-            return (
-              <g
-                key={piece.id}
-                className={`transition-all duration-500 ease-out ${isMovable ? "pointer-events-auto cursor-pointer" : ""}`}
-                onClick={() => isMovable && onPieceClick?.(piece.id)}
-              >
-                {/* Sombra de la ficha */}
-                <circle cx={x} cy={y + 5} r="18" fill="black" fillOpacity="0.3" />
-
-                {/* Cuerpo de la ficha */}
-                <circle
-                  cx={x}
-                  cy={y}
-                  r="18"
-                  fill={colorStyle.hex}
-                  stroke="white"
-                  strokeWidth="3"
-                  className={isMovable ? "animate-pulse" : ""}
-                />
-
-                {/* Brillo/Detalle superior */}
-                <circle cx={x - 5} cy={y - 5} r="6" fill="white" fillOpacity="0.4" />
-
-                {/* Indicador de "clicable" */}
-                {isMovable && (
-                  <circle
-                    cx={x}
-                    cy={y}
-                    r="25"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="2"
-                    strokeDasharray="4 4"
-                    className="animate-[spin_4s_linear_infinite]"
-                  />
-                )}
-              </g>
-            );
-          })
+          player.pieces.map((piece, idx) => (
+            <AnimatedPiece
+              key={piece.id}
+              piece={piece}
+              color={player.color}
+              idx={idx}
+              isMovable={isMyTurn && movablePieceIds.includes(piece.id)}
+              onClick={() => onPieceClick?.(piece.id)}
+            />
+          ))
         ))}
       </svg>
     </div>
