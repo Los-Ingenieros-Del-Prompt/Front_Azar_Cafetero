@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { getToken } from "@/lib/auth";
 
 export interface PlayerIdentity {
   name: string;
@@ -10,8 +11,9 @@ export interface PlayerIdentity {
 const API = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "https://azar-cafetero.duckdns.org";
 
 async function fetchIdentity(): Promise<PlayerIdentity> {
+  const token = getToken();
   const res = await fetch(`${API}/api/player/identity`, {
-    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error(`identity: ${res.status}`);
   return res.json();
