@@ -23,6 +23,7 @@ jobs:
         with:
           context: ./azar-cafetero
           push: true
+          no-cache: true 
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/azar-front:latest
           build-args: |
             NEXT_PUBLIC_GATEWAY_URL=${{ secrets.NEXT_PUBLIC_GATEWAY_URL }}
