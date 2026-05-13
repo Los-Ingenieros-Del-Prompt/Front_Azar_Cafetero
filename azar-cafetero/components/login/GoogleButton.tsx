@@ -2,6 +2,8 @@
 import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
 import { useUserContext } from "@/context/UserContext";
+import { saveToken } from "@/lib/auth";
+
 
 const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "https://azar-cafetero.duckdns.org";
 
@@ -42,8 +44,8 @@ export default function GoogleButton({ onError, onLoadingChange }: GoogleButtonP
         data.googleId ??
         data.email;
 
-      // Guarda nombre y avatar en contexto (el JWT vive en cookie HttpOnly)
 login({ name: data.name, avatarUrl: data.avatarUrl, userId: data.userId });
+saveToken(data.token);
 
       router.replace("/lobby");
     } catch (err: unknown) {
