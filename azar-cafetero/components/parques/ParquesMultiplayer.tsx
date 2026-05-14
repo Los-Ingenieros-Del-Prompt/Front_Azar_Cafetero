@@ -16,10 +16,10 @@ import ParquesPieces from "./ParquesPieces";
 
 // ─── Estilos por color ─────────────────────────────────────────────────────────
 export const COLOR_STYLES: Record<string, { bg: string; border: string; text: string; hex: string }> = {
-  ROJO:     { bg: "bg-red-500/20",     border: "border-red-400",     text: "text-red-300",     hex: "#f87171" }, // TL
-  AMARILLO: { bg: "bg-yellow-500/20",  border: "border-yellow-400",  text: "text-yellow-300",  hex: "#facc15" }, // TR
-  VERDE:    { bg: "bg-emerald-500/20", border: "border-emerald-400", text: "text-emerald-300", hex: "#34d399" }, // BL
-  AZUL:     { bg: "bg-blue-500/20",    border: "border-blue-400",    text: "text-blue-300",    hex: "#60a5fa" }, // BR
+  ROJO:     { bg: "bg-red-500/20",     border: "border-red-400",     text: "text-red-300",     hex: "#f87171" },
+  AMARILLO: { bg: "bg-yellow-500/20",  border: "border-yellow-400",  text: "text-yellow-300",  hex: "#facc15" },
+  VERDE:    { bg: "bg-emerald-500/20", border: "border-emerald-400", text: "text-emerald-300", hex: "#34d399" },
+  AZUL:     { bg: "bg-blue-500/20",    border: "border-blue-400",    text: "text-blue-300",    hex: "#60a5fa" },
 };
 export const COLOR_EMOJI: Record<string, string> = {
   ROJO: "🔴", AMARILLO: "🟡", VERDE: "🟢", AZUL: "🔵",
@@ -50,6 +50,60 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
 
   const [isAnimatingDice, setIsAnimatingDice] = useState(false);
   const [mixedStateChoice, setMixedStateChoice] = useState<'pending' | 'move' | null>(null);
+
+  // ─── Toast ────────────────────────────────────────────────────────────────
+  const [toast, setToast] = useState<string | null>(null);
+  const prevMyPiecesRef = useRef<PieceDTO[] | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = (msg: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast(msg);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3000);
+  };
+
+  useEffect(() => {
+    if (!gameState) return;
+
+    const myPlayer = gameState.players.find((p) => p.id === playerId);
+    if (!myPlayer) return;
+
+    const prevPieces = prevMyPiecesRef.current;
+
+    if (prevPieces) {
+      // Detectar si metí una ficha en meta
+      const scored = prevPieces.some((prev) => {
+        if (prev.atHome) return false;
+        const current = myPlayer.pieces.find((p) => p.id === prev.id);
+        return current?.atHome === true;
+      });
+
+      if (scored) {
+        showToast("🏠 ¡Metiste una ficha!");
+      }
+
+      // Detectar si me comieron una ficha (estaba en tablero, ahora en cárcel)
+      const wasCaptured = prevPieces.some((prev) => {
+        if (prev.inJail) return false;
+        const current = myPlayer.pieces.find((p) => p.id === prev.id);
+        return current?.inJail === true;
+      });
+
+      if (wasCaptured) {
+        showToast("💀 ¡Te comieron una ficha!");
+      }
+    }
+
+    prevMyPiecesRef.current = myPlayer.pieces;
+  }, [gameState, playerId]);
+
+  // Limpiar timer al desmontar
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+  // ─────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!gameState?.diceRolled) {
@@ -90,9 +144,8 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   const isHost = gameState?.players[0]?.id === playerId;
   const canRoll = isMyTurn && !gameState?.diceRolled && (gameState?.players.length ?? 0) >= 2 && !isAnimatingDice;
 
-  // Determinar si estamos en sala de espera
-  const isWaiting = !gameState || 
-                    gameState.state === "WAITING_FOR_PLAYERS" || 
+  const isWaiting = !gameState ||
+                    gameState.state === "WAITING_FOR_PLAYERS" ||
                     (gameState.state === undefined && gameState.players.length < 2);
 
   // Auto-release o estado mixto
@@ -111,8 +164,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
 
   const hasAnyValidMove = useMemo(() => {
     if (!gameState?.diceRolled || !isMyTurn || !myPlayer) return false;
-    
-    // Si pueden salir de la cárcel y aún no lo han descartado
+
     if (gameState.jailExitAvailable && mixedStateChoice !== 'move' && myPlayer.pieces.some(p => p.inJail)) {
         return true;
     }
@@ -121,7 +173,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     const d2Available = !gameState.die2Used;
     return myPlayer.pieces.some((piece) => {
       if (piece.atHome || piece.inJail) return false;
-      
+
       const canMoveD1 = d1Available && piece.relativePosition + gameState.die1 <= 68;
       const canMoveD2 = d2Available && piece.relativePosition + gameState.die2 <= 68;
       const canMoveSum = d1Available && d2Available && piece.relativePosition + (gameState.die1 + gameState.die2) <= 68;
@@ -129,43 +181,41 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     });
   }, [gameState, isMyTurn, myPlayer, mixedStateChoice]);
 
-  // Fichas que se pueden mover después de tirar el dado
   const movablePieces = useMemo<PieceDTO[]>(() => {
     if (!gameState?.diceRolled || !isMyTurn || !myPlayer || isAnimatingDice || mixedStateChoice === 'pending') return [];
-    
+
     const d1Available = !gameState.die1Used;
     const d2Available = !gameState.die2Used;
-    
+
     return myPlayer.pieces.filter((piece) => {
       if (piece.atHome || piece.inJail) return false;
-      
+
       const canMoveD1 = d1Available && piece.relativePosition + gameState.die1 <= 68;
       const canMoveD2 = d2Available && piece.relativePosition + gameState.die2 <= 68;
       const canMoveSum = d1Available && d2Available && piece.relativePosition + (gameState.die1 + gameState.die2) <= 68;
-      
+
       if (selectedDiceSelection === 1) return canMoveD1;
       if (selectedDiceSelection === 2) return canMoveD2;
       if (selectedDiceSelection === 3) return canMoveSum;
-      
+
       return canMoveD1 || canMoveD2 || canMoveSum;
     });
   }, [gameState, isMyTurn, myPlayer, selectedDiceSelection, isAnimatingDice, mixedStateChoice]);
 
   const handleRollDice = () => { if (canRoll) rollDice(gameId, playerId); };
-  
+
   const handlePieceClick = (pieceId: string) => {
     if (!gameState?.diceRolled || !isMyTurn || isAnimatingDice || mixedStateChoice === 'pending') return;
-    
+
     const d1Available = !gameState.die1Used;
     const d2Available = !gameState.die2Used;
-    
+
     let selection = selectedDiceSelection;
 
-    // Si solo hay un dado disponible, se selecciona automáticamente si no hay selección
     if (!selection) {
       if (d1Available && !d2Available) selection = 1;
       else if (!d1Available && d2Available) selection = 2;
-      else return; // Deben seleccionar un dado primero
+      else return;
     }
 
     movePiece(gameId, playerId, pieceId, selection);
@@ -175,11 +225,12 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   const handleSelectDice = (selection: number) => {
     if (isAnimatingDice || mixedStateChoice === 'pending') return;
     if (selection === selectedDiceSelection) {
-        setSelectedDiceSelection(null); // Toggle off
+        setSelectedDiceSelection(null);
     } else {
         setSelectedDiceSelection(selection);
     }
   };
+
   const handleStartGame = () => { if (isHost) startGame(gameId); };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -189,19 +240,18 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     return (
       <div className="relative min-h-screen w-full text-white overflow-hidden" style={{ background: "#0a1f0a" }}>
         <ParquesBoard />
-        <GameControls 
+        <GameControls
           onMenu={() => {
             leaveGame(gameId, playerId);
             leaveTable(gameId, playerId, playerName);
             router.push("/lobby");
-          }} 
+          }}
           onExit={() => {
             leaveGame(gameId, playerId);
             leaveTable(gameId, playerId, playerName);
             router.push("/lobby");
-          }} 
+          }}
         />
-        {/* ▼ DISEÑO LIBRE ▼ */}
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center p-10 rounded-2xl border border-emerald-500/40 bg-black/70 max-w-sm">
             <Loader2 className="w-12 h-12 animate-spin text-emerald-400 mx-auto mb-4" />
@@ -210,7 +260,6 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
             {error && <p className="text-red-400 mt-3 text-sm">{error}</p>}
           </div>
         </div>
-        {/* ▲ DISEÑO LIBRE ▲ */}
       </div>
     );
   }
@@ -225,28 +274,27 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     return (
       <div className="relative min-h-screen w-full text-white overflow-hidden" style={{ background: "#0a1f0a" }}>
         <ParquesBoard />
-        <GameControls 
+        <GameControls
           onMenu={() => {
             leaveGame(gameId, playerId);
             leaveTable(gameId, playerId, playerName);
             router.push("/lobby");
-          }} 
+          }}
           onExit={() => {
             leaveGame(gameId, playerId);
             leaveTable(gameId, playerId, playerName);
             router.push("/lobby");
-          }} 
+          }}
         />
-        
-        {/* Decorative elements */}
+
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 z-0" />
-        
+
         <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
           <div className="text-center p-8 md:p-12 rounded-[2.5rem] border-2 border-emerald-500/30 bg-black/85 backdrop-blur-xl max-w-xl w-full shadow-[0_0_50px_rgba(16,185,129,0.2)] animate-in fade-in zoom-in duration-500">
             <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-emerald-500/10 border-2 border-emerald-500/20 mb-8 animate-pulse">
               <span className="text-6xl">🎲</span>
             </div>
-            
+
             <h1 className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300 tracking-tighter mb-2">
               PARQUÉS
             </h1>
@@ -263,13 +311,13 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
                   {playersCount}/4
                 </span>
               </div>
-              
+
               <div className="grid gap-3">
                 {(gameState?.players ?? [{ id: playerId, name: playerName, color: "VERDE" as const }]).map((p: any) => {
                   const s = COLOR_STYLES[p.color] || COLOR_STYLES.VERDE;
                   return (
-                    <div 
-                      key={p.id} 
+                    <div
+                      key={p.id}
                       className={`group flex items-center justify-between px-5 py-4 rounded-2xl border ${s.border}/40 ${s.bg} backdrop-blur-md transition-all hover:scale-[1.02]`}
                     >
                       <div className="flex items-center gap-4">
@@ -293,7 +341,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
                     </div>
                   );
                 })}
-                
+
                 {playersCount < 4 && (
                   <div className="px-5 py-4 rounded-2xl border border-dashed border-white/10 bg-white/5 flex items-center gap-4 opacity-50">
                     <div className="w-10 h-10 rounded-full border border-dashed border-white/20 flex items-center justify-center text-white/20">
@@ -311,8 +359,8 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
                   onClick={handleStartGame}
                   disabled={!canStart}
                   className={`w-full group relative overflow-hidden py-5 rounded-2xl font-black text-sm uppercase tracking-[0.2em] transition-all duration-300 shadow-2xl ${
-                    canStart 
-                      ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:scale-[1.03] active:scale-95 shadow-emerald-500/25" 
+                    canStart
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:scale-[1.03] active:scale-95 shadow-emerald-500/25"
                       : "bg-white/10 text-white/20 cursor-not-allowed"
                   }`}
                 >
@@ -334,7 +382,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
                   Esperando a que el host inicie...
                 </div>
               )}
-              
+
               {!canStart && (
                 <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest">
                   Se requieren al menos 2 jugadores para empezar la rumba
@@ -356,19 +404,18 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     return (
       <div className="relative min-h-screen w-full text-white overflow-hidden" style={{ background: "#0a1f0a" }}>
         <ParquesBoard />
-        <GameControls 
+        <GameControls
           onMenu={() => {
             leaveGame(gameId, playerId);
             leaveTable(gameId, playerId, playerName);
             router.push("/lobby");
-          }} 
+          }}
           onExit={() => {
             leaveGame(gameId, playerId);
             leaveTable(gameId, playerId, playerName);
             router.push("/lobby");
-          }} 
+          }}
         />
-        {/* ▼ DISEÑO LIBRE ▼ */}
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center p-10 rounded-2xl border-2 border-emerald-500/50 bg-black/90 max-w-md w-full mx-4">
             <div className="text-6xl mb-4">🏆</div>
@@ -400,7 +447,6 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
             </div>
           </div>
         </div>
-        {/* ▲ DISEÑO LIBRE ▲ */}
       </div>
     );
   }
@@ -410,29 +456,34 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   // ═══════════════════════════════════════════════════════════════════════════
   return (
     <div className="relative w-full text-white overflow-hidden" style={{ height: "100vh", display: "flex", flexDirection: "column", userSelect: "none", background: "#0a1f0a" }}>
-      <GameControls 
+      <GameControls
         onMenu={() => {
           leaveGame(gameId, playerId);
           leaveTable(gameId, playerId, playerName);
           router.push("/lobby");
-        }} 
+        }}
         onExit={() => {
           leaveGame(gameId, playerId);
           leaveTable(gameId, playerId, playerName);
           router.push("/lobby");
-        }} 
+        }}
       />
 
       <div className="relative z-10 flex flex-col h-full overflow-hidden">
 
-        {/* Banner de error de dominio */}
-        {error && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 px-6 py-3 rounded-xl bg-red-900/80 border border-red-500 text-red-200 text-sm font-bold backdrop-blur-sm">
-            {error}
+        {/* Toast de eventos personales */}
+        {toast && (
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 px-8 py-4 rounded-2xl bg-black/85 border border-emerald-400 text-emerald-300 text-base font-bold backdrop-blur-sm text-center shadow-2xl pointer-events-none">
+            {toast}
           </div>
         )}
 
-        {/* ▼▼▼  ZONA DE DISEÑO LIBRE  ▼▼▼ */}
+        {/* Banner de error de dominio */}
+        {error && (
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 px-6 py-3 rounded-xl bg-red-900/80 border border-red-500 text-red-200 text-sm font-bold backdrop-blur-sm">
+            {error}
+          </div>
+        )}
 
         {/* Rivales arriba */}
         <div className="flex justify-center pt-4 pb-2 gap-3">
@@ -481,10 +532,10 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
           </span>
         </div>
 
-        {/* 🎲 ANIMACIÓN DE DADOS (ZONA CENTRAL) 🎲 */}
-        <DiceReveal 
-          die1={gameState.die1} 
-          die2={gameState.die2} 
+        {/* Animación de dados */}
+        <DiceReveal
+          die1={gameState.die1}
+          die2={gameState.die2}
           die1Used={gameState.die1Used}
           die2Used={gameState.die2Used}
           active={gameState.diceRolled}
@@ -587,7 +638,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
             </div>
           )}
 
-          {/* Botón dado flotante para mayor comodidad */}
+          {/* Botón dado flotante */}
           {canRoll && (
             <div className="absolute bottom-24 right-8 z-40 animate-bounce-slow">
               <button
@@ -597,15 +648,11 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
                 <div className="absolute inset-0 rounded-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                 <span className="text-5xl mb-1 filter drop-shadow-lg">🎲</span>
                 <span className="text-xs font-black uppercase tracking-widest bg-black/20 px-3 py-1 rounded-full">Lanzar</span>
-                
-                {/* Efecto de pulso externo */}
                 <div className="absolute inset-0 rounded-full animate-ping bg-emerald-500/30 -z-10" />
               </button>
             </div>
           )}
         </div>
-
-        {/* ▲▲▲  FIN ZONA DE DISEÑO LIBRE  ▲▲▲ */}
       </div>
     </div>
   );
@@ -645,7 +692,7 @@ function MyPlayerBadge({ player, isLeader, die1, die2, diceRolled }: {
   );
 }
 
-function DiceReveal({ die1, die2, die1Used, die2Used, active, selectedDice, onSelectDice }: { 
+function DiceReveal({ die1, die2, die1Used, die2Used, active, selectedDice, onSelectDice }: {
   die1: number; die2: number; die1Used: boolean; die2Used: boolean; active: boolean;
   selectedDice: number | null; onSelectDice: (d: number) => void;
 }) {
@@ -656,7 +703,7 @@ function DiceReveal({ die1, die2, die1Used, die2Used, active, selectedDice, onSe
     if (active) {
       setShow(true);
       setRolling(true);
-      const timer = setTimeout(() => setRolling(false), 1000); // 1s de "giro"
+      const timer = setTimeout(() => setRolling(false), 1000);
       return () => clearTimeout(timer);
     } else {
       setShow(false);
@@ -671,10 +718,9 @@ function DiceReveal({ die1, die2, die1Used, die2Used, active, selectedDice, onSe
         <div className={`pointer-events-auto cursor-pointer transition-transform ${selectedDice === 1 ? "scale-110 ring-4 ring-emerald-500 rounded-3xl" : "hover:scale-105"}`} onClick={() => !rolling && !die1Used && onSelectDice(1)}>
           <DiceBox value={die1} rolling={rolling} used={die1Used} delay="0s" />
         </div>
-        
-        {/* Sum Button */}
+
         {!rolling && !die1Used && !die2Used && (
-            <button 
+            <button
               className={`pointer-events-auto bg-emerald-500/80 hover:bg-emerald-500 text-white font-black px-3 py-1.5 rounded-lg text-xs transition-all ${selectedDice === 3 ? "scale-110 ring-2 ring-white shadow-[0_0_15px_rgba(16,185,129,0.5)]" : "hover:scale-105"}`}
               onClick={() => onSelectDice(3)}
             >
@@ -685,8 +731,7 @@ function DiceReveal({ die1, die2, die1Used, die2Used, active, selectedDice, onSe
         <div className={`pointer-events-auto cursor-pointer transition-transform ${selectedDice === 2 ? "scale-110 ring-4 ring-emerald-500 rounded-3xl" : "hover:scale-105"}`} onClick={() => !rolling && !die2Used && onSelectDice(2)}>
           <DiceBox value={die2} rolling={rolling} used={die2Used} delay="0.1s" />
         </div>
-        
-        {/* Banner de par si aplica */}
+
         {!rolling && die1 === die2 && die1 > 0 && (
           <div className="absolute -bottom-14 left-1/2 -translate-x-1/2 bg-yellow-500 text-black font-black px-4 py-1.5 rounded-full shadow-[0_0_25px_rgba(234,179,8,0.5)] animate-bounce text-sm tracking-widest pointer-events-none whitespace-nowrap">
             ¡PAREJA!
@@ -699,24 +744,21 @@ function DiceReveal({ die1, die2, die1Used, die2Used, active, selectedDice, onSe
 
 function DiceBox({ value, rolling, used, delay }: { value: number; rolling: boolean; used: boolean; delay: string }) {
   return (
-    <div 
+    <div
       className={`relative w-20 h-20 flex items-center justify-center bg-white rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.4)] border-b-4 border-slate-300 transition-all duration-500 ${rolling ? "animate-spin-dice" : ""} ${used ? "opacity-30 grayscale scale-90" : ""}`}
       style={{ animationDelay: delay }}
     >
-      {/* Brillo interno */}
       <div className="absolute inset-1.5 border border-slate-100 rounded-xl opacity-50" />
-      
-      {/* Puntos del dado */}
+
       <div className="grid grid-cols-3 grid-rows-3 gap-1.5 w-12 h-12">
         {getDiceDots(rolling ? Math.floor(Math.random() * 6) + 1 : value).map((dot, i) => (
-          <div 
-            key={i} 
-            className={`w-full h-full rounded-full ${dot ? "bg-slate-900 shadow-inner" : "bg-transparent"}`} 
+          <div
+            key={i}
+            className={`w-full h-full rounded-full ${dot ? "bg-slate-900 shadow-inner" : "bg-transparent"}`}
           />
         ))}
       </div>
 
-      {/* Sombra proyectada */}
       {!rolling && (
         <div className="absolute -bottom-8 w-full h-3 bg-black/30 blur-lg rounded-full scale-125" />
       )}
