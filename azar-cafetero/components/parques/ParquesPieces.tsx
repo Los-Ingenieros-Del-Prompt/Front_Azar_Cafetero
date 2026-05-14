@@ -317,31 +317,37 @@ export default function ParquesPieces({ gameState, onPieceClick, isMyTurn, movab
   }, [gameState.gameId]);
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-20">
-      <svg viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-        {gameState.players.map((player) => (
-          player.pieces.map((piece, idx) => (
-            <AnimatedPiece
-              key={piece.id}
-              piece={piece}
-              color={player.color}
-              idx={idx}
-              isMovable={isMyTurn && movablePieceIds.includes(piece.id)}
-              onClick={() => onPieceClick?.(piece.id)}
-            />
-          ))
-        ))}
+  <>
+    {gameState.players.map((player) => (
+      player.pieces.map((piece, idx) => (
+        <AnimatedPiece
+          key={piece.id}
+          piece={piece}
+          color={player.color}
+          idx={idx}
+          isMovable={isMyTurn && movablePieceIds.includes(piece.id)}
+          onClick={() => onPieceClick?.(piece.id)}
+        />
+      ))
+    ))}
 
-        {/* 🛠️ DEBUG MODE: Dibuja un punto en cada una de las coordenadas */}
-        {showDebug && Object.entries(PATH_COORDINATES).map(([index, pos]) => (
-          <g key={`debug-${index}`}>
-            <circle cx={pos.x} cy={pos.y} r="8" fill="rgba(255,0,0,0.6)" />
-            <text x={pos.x} y={pos.y + 3} fontSize="10" fill="white" textAnchor="middle" fontWeight="bold">
-              {index}
-            </text>
-          </g>
-        ))}
-      </svg>
-    </div>
-  );
+    {/* DEBUG */}
+    {showDebug && Object.entries(PATH_COORDINATES).map(([index, pos]) => (
+      <g key={`debug-${index}`}>
+        <circle cx={pos.x} cy={pos.y} r="8" fill="rgba(255,0,0,0.6)" />
+        <text
+          x={pos.x}
+          y={pos.y + 3}
+          fontSize="10"
+          fill="white"
+          textAnchor="middle"
+          fontWeight="bold"
+        >
+          {index}
+        </text>
+      </g>
+    ))}
+  </>
+);
+
 }
