@@ -38,6 +38,8 @@ export interface GameStateDTO {
   finished: boolean;
   winnerId: string | null;
   players: PlayerDTO[];
+  eventForCurrentPlayer: string | null;  // "SCORED" | null
+  killedByPlayerName: string | null; 
 }
 
 export interface PlayerInput {
