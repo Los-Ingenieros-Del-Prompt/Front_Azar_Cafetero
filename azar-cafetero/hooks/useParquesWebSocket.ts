@@ -236,6 +236,17 @@ const joinGame = useCallback((gameId: string, playerId: string, playerName: stri
     });
   }, []);
 
+  // ── Pasar turno ───────────────────────────────────────────────────────────
+  const passTurn = useCallback((gameId: string, playerId: string) => {
+    const client = clientRef.current;
+    if (!client?.connected) return;
+
+    client.publish({
+      destination: `/app/game/${gameId}/pass`,
+      body: JSON.stringify({ playerId }),
+    });
+  }, []);
+
   // ── Cleanup ───────────────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
@@ -256,5 +267,6 @@ const joinGame = useCallback((gameId: string, playerId: string, playerName: stri
   startGame,  // Added startGame
   rollDice,
   movePiece,
+  passTurn,
 };
 }
