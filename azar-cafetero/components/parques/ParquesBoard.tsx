@@ -28,7 +28,7 @@ export default function ParquesBoard({
           preserveAspectRatio="none"
         />
 
-        {/* ← AQUI VAN LAS FICHAS */}
+    
         {children}
       </svg>
 
