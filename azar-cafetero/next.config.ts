@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api-proxy/:path*',
-        destination: 'http://azar-alb-774975018.us-east-1.elb.amazonaws.com/:path*',
+        destination: 'http://azar-alb-774975018.us-east-1.elb.amazonaws.com/api/:path*',
       },
     ];
   },
