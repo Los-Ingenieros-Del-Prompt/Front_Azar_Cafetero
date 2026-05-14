@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import BriscaMultiplayer from "@/components/brisca/BriscaMultiplayer";
 import { useUserContext } from "@/context/UserContext";
+import { useGameWebSocket } from "@/hooks/useGameWebSocket";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -15,11 +16,27 @@ export default function BriscaRoomPage({ params }: PageProps) {
   const { user, isLoading } = useUserContext();
   const isLocalDevMock = process.env.NODE_ENV === "development";
 
+  const { connect: connectLobby, isConnected: isLobbyConnected, joinTable: joinLobbyTable } = useGameWebSocket();
+
   useEffect(() => {
     if (!isLocalDevMock && !isLoading && !user) {
       router.replace("/");
     }
   }, [isLocalDevMock, user, isLoading, router]);
+
+  // Connect to Lobby WebSocket to maintain table session
+  useEffect(() => {
+    if (!isLocalDevMock && user) {
+      connectLobby();
+    }
+  }, [isLocalDevMock, user, connectLobby]);
+
+  // Join the table in the Lobby WebSocket to set session attributes for cleanup
+  useEffect(() => {
+    if (isLobbyConnected && user && id) {
+      joinLobbyTable(id, user.userId, user.name);
+    }
+  }, [isLobbyConnected, user, id, joinLobbyTable]);
 
   if (!isLocalDevMock && isLoading) {
     return (

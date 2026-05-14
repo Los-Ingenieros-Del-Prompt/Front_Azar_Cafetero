@@ -11,6 +11,7 @@ import {
   PlayerDTO,
   PieceDTO,
 } from "@/hooks/useParquesWebSocket";
+import { useGameWebSocket } from "@/hooks/useGameWebSocket";
 import ParquesPieces from "./ParquesPieces";
 
 // ─── Estilos por color ─────────────────────────────────────────────────────────
@@ -44,6 +45,8 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
 
   const { isConnected, connectionStatus, error, gameState, connect, subscribeToGame, createGame, joinGame, startGame, rollDice, movePiece, passTurn, exitJail, leaveGame } =
     useParquesWebSocket({ onError: (err) => console.error("[Parqués] WS error:", err) });
+
+  const { leaveTable } = useGameWebSocket();
 
   const [isAnimatingDice, setIsAnimatingDice] = useState(false);
   const [mixedStateChoice, setMixedStateChoice] = useState<'pending' | 'move' | null>(null);
@@ -189,11 +192,13 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
         <GameControls 
           onMenu={() => {
             leaveGame(gameId, playerId);
+            leaveTable(gameId, playerId, playerName);
             router.push("/lobby");
           }} 
           onExit={() => {
             leaveGame(gameId, playerId);
-            router.push("/");
+            leaveTable(gameId, playerId, playerName);
+            router.push("/lobby");
           }} 
         />
         {/* ▼ DISEÑO LIBRE ▼ */}
@@ -223,11 +228,13 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
         <GameControls 
           onMenu={() => {
             leaveGame(gameId, playerId);
+            leaveTable(gameId, playerId, playerName);
             router.push("/lobby");
           }} 
           onExit={() => {
             leaveGame(gameId, playerId);
-            router.push("/");
+            leaveTable(gameId, playerId, playerName);
+            router.push("/lobby");
           }} 
         />
         
@@ -352,11 +359,13 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
         <GameControls 
           onMenu={() => {
             leaveGame(gameId, playerId);
+            leaveTable(gameId, playerId, playerName);
             router.push("/lobby");
           }} 
           onExit={() => {
             leaveGame(gameId, playerId);
-            router.push("/");
+            leaveTable(gameId, playerId, playerName);
+            router.push("/lobby");
           }} 
         />
         {/* ▼ DISEÑO LIBRE ▼ */}
@@ -405,11 +414,13 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
       <GameControls 
         onMenu={() => {
           leaveGame(gameId, playerId);
+          leaveTable(gameId, playerId, playerName);
           router.push("/lobby");
         }} 
         onExit={() => {
           leaveGame(gameId, playerId);
-          router.push("/");
+          leaveTable(gameId, playerId, playerName);
+          router.push("/lobby");
         }} 
       />
 
