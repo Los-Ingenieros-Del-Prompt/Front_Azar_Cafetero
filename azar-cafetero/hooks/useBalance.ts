@@ -8,7 +8,7 @@ import {
   BalanceSseEvent,
 } from "@/lib/balanceApi";
 
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+const LOBBY_API = (process.env.NEXT_PUBLIC_LOBBY_URL ?? "/api-proxy").replace(/\/$/, "");
 
 // Monto del bono diario — debe coincidir con Balance.DAILY_BONUS en el backend
 const DAILY_BONUS_AMOUNT = 100;
@@ -64,7 +64,7 @@ export function useBalance(): UseBalanceReturn {
   useEffect(() => {
     if (loading) return;
 
-    const es = new EventSource(`${GATEWAY}/player/balance/live`, {
+    const es = new EventSource(`${LOBBY_API}/player/balance/live`, {
       withCredentials: true,
     });
 

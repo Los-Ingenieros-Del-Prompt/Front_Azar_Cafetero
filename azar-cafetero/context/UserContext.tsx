@@ -8,7 +8,11 @@ import {
   ReactNode,
 } from "react";
 
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+const AUTH_API = (
+  process.env.NEXT_PUBLIC_AUTH_URL ??
+  process.env.NEXT_PUBLIC_GATEWAY_URL ??
+  "http://localhost:8080"
+).replace(/\/$/, "");
 
 export interface StoredUser {
   name: string;
@@ -44,7 +48,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      await fetch(`${GATEWAY}/auth/logout`, {
+      await fetch(`${AUTH_API}/auth/logout`, {
         method: "POST",
         credentials: "include",
       });

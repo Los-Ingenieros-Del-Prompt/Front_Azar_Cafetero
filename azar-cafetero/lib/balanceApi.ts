@@ -1,4 +1,5 @@
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+import { getToken } from "@/lib/auth";
+const LOBBY_API = (process.env.NEXT_PUBLIC_LOBBY_URL ?? "/api-proxy").replace(/\/$/, "");
 
 export interface BalanceData {
   userId: string;
@@ -14,8 +15,9 @@ export interface BalanceSseEvent {
 }
 
 export async function getBalance(): Promise<BalanceData> {
-  const res = await fetch(`${GATEWAY}/player/balance`, {
-    credentials: "include",
+  const token = getToken();
+  const res = await fetch(`${LOBBY_API}/player/balance`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`balance: ${res.status}`);
@@ -27,9 +29,10 @@ export async function claimDailyBonus(): Promise<{
   amount: number;
   transactionId: string;
 }> {
-  const res = await fetch(`${GATEWAY}/player/bonus`, {
+  const token = getToken();
+  const res = await fetch(`${LOBBY_API}/player/bonus`, {
     method: "POST",
-    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "Error al reclamar bono");

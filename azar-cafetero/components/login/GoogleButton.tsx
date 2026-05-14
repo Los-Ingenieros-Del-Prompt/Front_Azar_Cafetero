@@ -5,7 +5,11 @@ import { useUserContext } from "@/context/UserContext";
 import { saveToken } from "@/lib/auth";
 
 
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "https://azar-cafetero.duckdns.org";
+const AUTH_API = (
+  process.env.NEXT_PUBLIC_AUTH_URL ??
+  process.env.NEXT_PUBLIC_GATEWAY_URL ??
+  "https://azar-cafetero.duckdns.org"
+).replace(/\/$/, "");
 
 interface GoogleButtonProps {
   onError: (message: string) => void;
@@ -27,7 +31,7 @@ export default function GoogleButton({ onError, onLoadingChange }: GoogleButtonP
     onError("");
 
     try {
-      const res = await fetch(`${GATEWAY}/auth/google`, {
+      const res = await fetch(`${AUTH_API}/auth/google`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -44,8 +48,15 @@ export default function GoogleButton({ onError, onLoadingChange }: GoogleButtonP
         data.googleId ??
         data.email;
 
-login({ name: data.name, avatarUrl: data.avatarUrl, userId: data.userId });
-saveToken(data.token);
+      if (!data.token) {
+        throw new Error("La respuesta de autenticación no incluyó token JWT.");
+      }
+      if (!resolvedUserId) {
+        throw new Error("La respuesta de autenticación no incluyó userId.");
+      }
+
+      login({ name: data.name, avatarUrl: data.avatarUrl, userId: resolvedUserId });
+      saveToken(data.token);
 
       router.replace("/lobby");
     } catch (err: unknown) {

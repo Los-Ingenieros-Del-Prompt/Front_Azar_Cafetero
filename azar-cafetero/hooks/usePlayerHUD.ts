@@ -7,12 +7,11 @@ export interface PlayerIdentity {
   avatar: string;
 }
 
-// Apunta al gateway, no al lobby directamente
-const API = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "https://azar-cafetero.duckdns.org";
+const LOBBY_API = (process.env.NEXT_PUBLIC_LOBBY_URL ?? "/api-proxy").replace(/\/$/, "");
 
 async function fetchIdentity(): Promise<PlayerIdentity> {
   const token = getToken();
-  const res = await fetch(`${API}/api/player/identity`, {
+  const res = await fetch(`${LOBBY_API}/player/identity`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error(`identity: ${res.status}`);
