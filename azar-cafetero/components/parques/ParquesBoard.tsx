@@ -1,13 +1,19 @@
 "use client";
 
-export default function ParquesBoard() {
+import React from "react";
+
+export default function ParquesBoard({
+  children,
+}: {
+  children?: React.ReactNode;
+}) {
   return (
     <div className="absolute inset-0 rounded-2xl overflow-hidden shadow-2xl">
       
       {/* Fondo verde */}
       <div className="absolute inset-0 bg-[#0d1f0d]" />
 
-      {/* SVG del tablero */}
+      {/* SVG PRINCIPAL */}
       <svg
         viewBox="0 0 1000 1000"
         preserveAspectRatio="xMidYMid meet"
@@ -21,6 +27,9 @@ export default function ParquesBoard() {
           height="1000"
           preserveAspectRatio="none"
         />
+
+    
+        {children}
       </svg>
 
       {/* Luz */}
