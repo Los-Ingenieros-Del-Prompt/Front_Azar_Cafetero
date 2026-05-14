@@ -305,7 +305,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   const BET_AMOUNT = 100;
   const { amount: playerBalance, refreshBalance } = useBalance();
 
-  const { isConnected, connectionStatus, error, gameState, connect, createGame, joinGame, startGame, playCard, requestGameState, addBot } =
+  const { isConnected, connectionStatus, error, gameState, connect, createGame, joinGame, startGame, playCard, requestGameState, addBot, leaveGame } =
     useBriscaWebSocket({ onError:(err)=>console.error("[Brisca] Error:",err) });
 
   useEffect(()=>{
@@ -590,7 +590,16 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
     return (
       <div style={{ position:"relative",minHeight:"100vh",width:"100%",color:"white",overflow:"hidden",background:"#001800" }}>
         <PokerTable/>
-        <GameControls onMenu={() => router.push("/lobby")} onExit={() => router.push("/")} />
+        <GameControls 
+          onMenu={() => {
+            leaveGame(gameId, playerId);
+            router.push("/lobby");
+          }} 
+          onExit={() => {
+            leaveGame(gameId, playerId);
+            router.push("/");
+          }} 
+        />
         <div style={{ position:"relative",zIndex:10,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Georgia,serif" }}>
           <div style={modalBox}>
             <FlagStripe h={8}/>
@@ -694,7 +703,16 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
     return (
       <div style={{ position:"relative",minHeight:"100vh",width:"100%",color:"white",overflow:"hidden",background:"#001800" }}>
         <PokerTable/>
-        <GameControls onMenu={() => router.push("/lobby")} onExit={() => router.push("/")} />
+        <GameControls 
+          onMenu={() => {
+            leaveGame(gameId, playerId);
+            router.push("/lobby");
+          }} 
+          onExit={() => {
+            leaveGame(gameId, playerId);
+            router.push("/");
+          }} 
+        />
         <div style={{ position:"relative",zIndex:10,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Georgia,serif" }}>
           <div style={{ ...modalBox,maxWidth:500 }}>
             <FlagStripe h={8}/>
@@ -735,7 +753,16 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   return (
     <div style={{ position:"relative",width:"100%",color:"white",overflow:"hidden",height:"100vh",display:"flex",flexDirection:"column",userSelect:"none",fontFamily:"sans-serif",background:"#001800" }}>
       <PokerTable/>
-      <GameControls onMenu={() => router.push("/lobby")} onExit={() => router.push("/")} />
+      <GameControls 
+        onMenu={() => {
+          leaveGame(gameId, playerId);
+          router.push("/lobby");
+        }} 
+        onExit={() => {
+          leaveGame(gameId, playerId);
+          router.push("/");
+        }} 
+      />
       <div style={{ position:"relative",zIndex:10,display:"flex",flexDirection:"column",height:"100%",overflow:"hidden" }}>
 
         {/* TOP PLAYER */}

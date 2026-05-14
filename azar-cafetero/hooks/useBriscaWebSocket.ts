@@ -265,6 +265,20 @@ export function useBriscaWebSocket(options: UseBriscaWebSocketOptions = {}) {
     });
   }, []);
 
+  // Leave the game
+  const leaveGame = useCallback((gameId: string, playerId: string) => {
+    const client = clientRef.current;
+    if (!client?.connected) {
+      console.warn("[Brisca WS] Cannot leave game - not connected");
+      return;
+    }
+    console.log("[Brisca WS] Leaving game:", { gameId, playerId });
+    client.publish({
+      destination: `/app/game/${gameId}/leave`,
+      body: JSON.stringify({ gameId, playerId }),
+    });
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -286,5 +300,6 @@ export function useBriscaWebSocket(options: UseBriscaWebSocketOptions = {}) {
     playCard,
     requestGameState,
     addBot,
+    leaveGame,
   };
 }
