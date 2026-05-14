@@ -55,11 +55,22 @@ const getExitAbsPos = (color: string) => {
   }
 };
 
+const getThreshold = (color: string) => {
+  switch (color) {
+    case "AMARILLO":
+    case "VERDE": return 61;
+    case "ROJO":
+    case "AZUL": return 60;
+    default: return 64;
+  }
+};
+
 const getAbsFromRel = (relPos: number, color: string) => {
   if (relPos < 0) return -1;
   const exitAbs = getExitAbsPos(color);
-  if (relPos < 64) return (exitAbs + relPos) % 64;
-  const ladderRel = relPos - 64;
+  const threshold = getThreshold(color);
+  if (relPos < threshold) return (exitAbs + relPos) % 64;
+  const ladderRel = relPos - threshold;
   switch (color) {
     case "AMARILLO": return 64 + ladderRel;
     case "AZUL": return 71 + ladderRel;
@@ -77,7 +88,10 @@ const getCoords = (absPos: number, color: string, pieceIndex: number) => {
     return { x: base.x + off.dx, y: base.y + off.dy };
   }
   const pos = PATH_COORDINATES[absPos] || { x: 500, y: 500 };
-  const isVictory = [70, 78, 89, 97].includes(absPos);
+  const isVictory = (color === "AMARILLO" && absPos === 70) ||
+                    (color === "AZUL" && absPos === 78) ||
+                    (color === "VERDE" && absPos === 89) ||
+                    (color === "ROJO" && absPos === 97);
   if (isVictory) return { x: pos.x + (pieceIndex - 1.5) * 12, y: pos.y + (pieceIndex - 1.5) * 12 };
   return pos;
 };
@@ -163,6 +177,24 @@ function AnimatedPiece({ piece, color, idx, isMovable, onClick }: {
 }
 
 export default function ParquesPieces({ gameState, onPieceClick, isMyTurn, movablePieceIds }: ParquesPiecesProps) {
+  const [showDebug, setShowDebug] = useState(false);
+
+  useEffect(() => {
+    // Solo permitir debug en localhost y en la sala de debug específica
+    const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const isDebugRoom = gameState.gameId === "parques-debug-room";
+    
+    if (!isLocal && !isDebugRoom) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.shiftKey && e.key === "D") {
+        setShowDebug((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [gameState.gameId]);
+
   return (
     <div className="absolute inset-0 pointer-events-none z-20">
       <svg viewBox="0 0 1000 1000" className="w-full h-full">
@@ -177,6 +209,16 @@ export default function ParquesPieces({ gameState, onPieceClick, isMyTurn, movab
               onClick={() => onPieceClick?.(piece.id)}
             />
           ))
+        ))}
+
+        {/* 🛠️ DEBUG MODE: Dibuja un punto en cada una de las coordenadas */}
+        {showDebug && Object.entries(PATH_COORDINATES).map(([index, pos]) => (
+          <g key={`debug-${index}`}>
+            <circle cx={pos.x} cy={pos.y} r="8" fill="rgba(255,0,0,0.6)" />
+            <text x={pos.x} y={pos.y + 3} fontSize="10" fill="white" textAnchor="middle" fontWeight="bold">
+              {index}
+            </text>
+          </g>
         ))}
       </svg>
     </div>
