@@ -616,6 +616,7 @@ export default function ParquesMultiplayer({
         </div>
 
         {/* Centro */}
+        {/* Centro */}
         <div className="flex-1 flex items-center justify-center relative p-4">
           <div
             className="relative"
@@ -624,16 +625,16 @@ export default function ParquesMultiplayer({
               aspectRatio: "1 / 1",
             }}
           >
-            {gameState && (
-              <ParquesPieces
-                gameState={gameState}
-                isMyTurn={isMyTurn}
-                movablePieceIds={movablePieces.map(
-                  (p) => p.id
-                )}
-                onPieceClick={handlePieceClick}
-              />
-            )}
+            <ParquesBoard>
+              {gameState && (
+                <ParquesPieces
+                  gameState={gameState}
+                  isMyTurn={isMyTurn}
+                  movablePieceIds={movablePieces.map((p) => p.id)}
+                  onPieceClick={handlePieceClick}
+                />
+              )}
+            </ParquesBoard>
           </div>
         </div>
 
