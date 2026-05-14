@@ -42,7 +42,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   const [selectedDiceSelection, setSelectedDiceSelection] = useState<number | null>(null);
   const hasJoinedRef = useRef(false);
 
-  const { isConnected, connectionStatus, error, gameState, connect, subscribeToGame, createGame, joinGame, startGame, rollDice, movePiece, passTurn, exitJail } =
+  const { isConnected, connectionStatus, error, gameState, connect, subscribeToGame, createGame, joinGame, startGame, rollDice, movePiece, passTurn, exitJail, leaveGame } =
     useParquesWebSocket({ onError: (err) => console.error("[Parqués] WS error:", err) });
 
   const [isAnimatingDice, setIsAnimatingDice] = useState(false);

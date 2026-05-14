@@ -305,7 +305,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   const BET_AMOUNT = 100;
   const { amount: playerBalance, refreshBalance } = useBalance();
 
-  const { isConnected, connectionStatus, error, gameState, connect, createGame, joinGame, startGame, playCard, requestGameState, addBot } =
+  const { isConnected, connectionStatus, error, gameState, connect, createGame, joinGame, startGame, playCard, requestGameState, addBot, leaveGame } =
     useBriscaWebSocket({ onError:(err)=>console.error("[Brisca] Error:",err) });
 
   useEffect(()=>{
