@@ -135,30 +135,38 @@ export function useGameWebSocket(options: UseGameWebSocketOptions = {}) {
         const event = JSON.parse(message.body);
         console.log("[Game WS] Floor event:", event);
         
+        const eventType = event.eventType || event.type;
+        const data = event.data || event; // Support both structures
+        
         // Limit event history to last 100 events to prevent memory leaks
         setFloorEvents(prev => {
-          const updated = [...prev, event];
+          const updated = [...prev, { type: eventType, data }];
           return updated.slice(-100);
         });
         
         // Update tables based on events
-        if (event.type === "TABLE_CREATED") {
-          setTables(prev => [...prev, {
-            tableId: event.data.tableId,
-            tableName: event.data.tableName,
-            playerCount: 0,
-            createdAt: Date.now(),
-            requiredBet: event.data.requiredBet || 0,
-            maxPlayers: event.data.maxPlayers,
-          }]);
-        } else if (event.type === "PLAYER_JOINED") {
+        if (eventType === "TABLE_CREATED") {
+          setTables(prev => {
+            // Avoid duplicates
+            if (prev.some(t => t.tableId === data.tableId)) return prev;
+            return [...prev, {
+              tableId: data.tableId,
+              tableName: data.tableName,
+              playerCount: 0,
+              createdAt: Date.now(),
+              requiredBet: data.requiredBet || 0,
+              maxPlayers: data.maxPlayers,
+            }];
+          });
+        } else if (eventType === "PLAYER_JOINED") {
           setTables(prev => prev.map(t => 
-            t.tableId === event.data.tableId 
-              ? { ...t, playerCount: event.data.currentPlayers }
+            t.tableId === data.tableId 
+              ? { ...t, playerCount: data.currentPlayers }
               : t
           ));
-        } else if (event.type === "TABLE_CLOSED") {
-          setTables(prev => prev.filter(t => t.tableId !== event.data.tableId));
+        } else if (eventType === "TABLE_CLOSED") {
+          console.log("[Game WS] Table closed event for:", data.tableId);
+          setTables(prev => prev.filter(t => t.tableId !== data.tableId));
         }
       } catch (e) {
         console.error("[Game WS] Failed to parse floor event:", e);

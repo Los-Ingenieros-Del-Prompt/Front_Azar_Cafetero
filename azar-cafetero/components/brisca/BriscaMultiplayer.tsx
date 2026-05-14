@@ -14,6 +14,7 @@ import {
   BotDifficulty,
 } from "@/hooks/useBriscaWebSocket";
 import { useBalance } from "@/hooks/useBalance";
+import { useGameWebSocket } from "@/hooks/useGameWebSocket";
 
 // ============ TYPE DEFINITIONS ============
 type Suit = "Oros" | "Copas" | "Espadas" | "Bastos";
@@ -308,6 +309,8 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   const { isConnected, connectionStatus, error, gameState, connect, createGame, joinGame, startGame, playCard, requestGameState, addBot, leaveGame } =
     useBriscaWebSocket({ onError:(err)=>console.error("[Brisca] Error:",err) });
 
+  const { leaveTable } = useGameWebSocket();
+
   useEffect(()=>{
     if (mockMode) return;
     connect();
@@ -593,11 +596,13 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
         <GameControls 
           onMenu={() => {
             leaveGame(gameId, playerId);
+            leaveTable(gameId, playerId, playerName);
             router.push("/lobby");
           }} 
           onExit={() => {
             leaveGame(gameId, playerId);
-            router.push("/");
+            leaveTable(gameId, playerId, playerName);
+            router.push("/lobby");
           }} 
         />
         <div style={{ position:"relative",zIndex:10,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Georgia,serif" }}>
@@ -706,11 +711,13 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
         <GameControls 
           onMenu={() => {
             leaveGame(gameId, playerId);
+            leaveTable(gameId, playerId, playerName);
             router.push("/lobby");
           }} 
           onExit={() => {
             leaveGame(gameId, playerId);
-            router.push("/");
+            leaveTable(gameId, playerId, playerName);
+            router.push("/lobby");
           }} 
         />
         <div style={{ position:"relative",zIndex:10,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Georgia,serif" }}>
@@ -756,11 +763,13 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
       <GameControls 
         onMenu={() => {
           leaveGame(gameId, playerId);
+          leaveTable(gameId, playerId, playerName);
           router.push("/lobby");
         }} 
         onExit={() => {
           leaveGame(gameId, playerId);
-          router.push("/");
+          leaveTable(gameId, playerId, playerName);
+          router.push("/lobby");
         }} 
       />
       <div style={{ position:"relative",zIndex:10,display:"flex",flexDirection:"column",height:"100%",overflow:"hidden" }}>
