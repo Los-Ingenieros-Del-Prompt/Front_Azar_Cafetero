@@ -318,7 +318,7 @@ export default function ParquesPieces({ gameState, onPieceClick, isMyTurn, movab
 
   return (
     <div className="absolute inset-0 pointer-events-none z-20">
-      <svg viewBox="0 0 1000 1000" className="w-full h-full">
+      <svg viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
         {gameState.players.map((player) => (
           player.pieces.map((piece, idx) => (
             <AnimatedPiece

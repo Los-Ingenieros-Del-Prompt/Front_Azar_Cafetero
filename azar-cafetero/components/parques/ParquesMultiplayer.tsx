@@ -443,21 +443,32 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
         </div>
 
         {/* Centro — tablero */}
-        <div className="flex-1 flex items-center justify-center relative">
-          <div className="relative w-full max-w-2xl aspect-square px-8">
-            {/* Las fichas se renderizan sobre el tablero */}
-            {gameState && (
-              <ParquesPieces
-                gameState={gameState}
-                isMyTurn={isMyTurn}
-                movablePieceIds={movablePieces.map(p => p.id)}
-                onPieceClick={handlePieceClick}
-              />
-            )}
+       {/* Centro — tablero + fichas */}
+      <div className="flex-1 flex items-center justify-center relative p-4">
+        
+        <div
+          className="relative"
+          style={{
+            width: "min(1000px, calc(100vmin - 2rem))",
+            aspectRatio: "1 / 1",
+          }}
+        >
+          
+          {/* Tablero */}
+          
 
-            {/* Se removió el menú de selección de dados aquí para hacerlo interactivo en los propios dados */}
-          </div>
+          {/* Fichas */}
+          {gameState && (
+            <ParquesPieces
+              gameState={gameState}
+              isMyTurn={isMyTurn}
+              movablePieceIds={movablePieces.map((p) => p.id)}
+              onPieceClick={handlePieceClick}
+            />
+          )}
+
         </div>
+      </div>
 
         {/* Indicador de turno */}
         <div className="text-center py-2">
