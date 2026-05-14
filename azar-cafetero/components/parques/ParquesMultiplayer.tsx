@@ -560,7 +560,7 @@ function DiceReveal({ die1, die2, die1Used, die2Used, active, selectedDice, onSe
 
   return (
     <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
-      <div className="flex gap-8 items-center animate-in zoom-in fade-in duration-500">
+      <div className="flex gap-6 items-center animate-in zoom-in fade-in duration-500">
         <div className={`pointer-events-auto cursor-pointer transition-transform ${selectedDice === 1 ? "scale-110 ring-4 ring-emerald-500 rounded-3xl" : "hover:scale-105"}`} onClick={() => !rolling && !die1Used && onSelectDice(1)}>
           <DiceBox value={die1} rolling={rolling} used={die1Used} delay="0s" />
         </div>
@@ -568,7 +568,7 @@ function DiceReveal({ die1, die2, die1Used, die2Used, active, selectedDice, onSe
         {/* Sum Button */}
         {!rolling && !die1Used && !die2Used && (
             <button 
-              className={`pointer-events-auto bg-emerald-500/80 hover:bg-emerald-500 text-white font-black px-4 py-2 rounded-xl transition-all ${selectedDice === 3 ? "scale-110 ring-4 ring-white shadow-[0_0_20px_rgba(16,185,129,0.5)]" : "hover:scale-105"}`}
+              className={`pointer-events-auto bg-emerald-500/80 hover:bg-emerald-500 text-white font-black px-3 py-1.5 rounded-lg text-xs transition-all ${selectedDice === 3 ? "scale-110 ring-2 ring-white shadow-[0_0_15px_rgba(16,185,129,0.5)]" : "hover:scale-105"}`}
               onClick={() => onSelectDice(3)}
             >
               SUMA ({die1 + die2})
@@ -581,7 +581,7 @@ function DiceReveal({ die1, die2, die1Used, die2Used, active, selectedDice, onSe
         
         {/* Banner de par si aplica */}
         {!rolling && die1 === die2 && die1 > 0 && (
-          <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 bg-yellow-500 text-black font-black px-6 py-2 rounded-full shadow-[0_0_30px_rgba(234,179,8,0.5)] animate-bounce text-xl tracking-widest pointer-events-none">
+          <div className="absolute -bottom-14 left-1/2 -translate-x-1/2 bg-yellow-500 text-black font-black px-4 py-1.5 rounded-full shadow-[0_0_25px_rgba(234,179,8,0.5)] animate-bounce text-sm tracking-widest pointer-events-none whitespace-nowrap">
             ¡PAREJA!
           </div>
         )}
@@ -593,14 +593,14 @@ function DiceReveal({ die1, die2, die1Used, die2Used, active, selectedDice, onSe
 function DiceBox({ value, rolling, used, delay }: { value: number; rolling: boolean; used: boolean; delay: string }) {
   return (
     <div 
-      className={`relative w-32 h-32 flex items-center justify-center bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-b-8 border-slate-300 transition-all duration-500 ${rolling ? "animate-spin-dice" : "scale-125"} ${used ? "opacity-30 grayscale scale-100" : ""}`}
+      className={`relative w-20 h-20 flex items-center justify-center bg-white rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.4)] border-b-4 border-slate-300 transition-all duration-500 ${rolling ? "animate-spin-dice" : ""} ${used ? "opacity-30 grayscale scale-90" : ""}`}
       style={{ animationDelay: delay }}
     >
       {/* Brillo interno */}
-      <div className="absolute inset-2 border-2 border-slate-100 rounded-2xl opacity-50" />
+      <div className="absolute inset-1.5 border border-slate-100 rounded-xl opacity-50" />
       
       {/* Puntos del dado */}
-      <div className="grid grid-cols-3 grid-rows-3 gap-2 w-20 h-20">
+      <div className="grid grid-cols-3 grid-rows-3 gap-1.5 w-12 h-12">
         {getDiceDots(rolling ? Math.floor(Math.random() * 6) + 1 : value).map((dot, i) => (
           <div 
             key={i} 
@@ -611,7 +611,7 @@ function DiceBox({ value, rolling, used, delay }: { value: number; rolling: bool
 
       {/* Sombra proyectada */}
       {!rolling && (
-        <div className="absolute -bottom-12 w-full h-4 bg-black/40 blur-xl rounded-full scale-150" />
+        <div className="absolute -bottom-8 w-full h-3 bg-black/30 blur-lg rounded-full scale-125" />
       )}
     </div>
   );
