@@ -87,36 +87,50 @@ function AnimatedPiece({ piece, color, idx, isMovable, onClick }: {
 }) {
   const [displayAbsPos, setDisplayAbsPos] = useState(piece.absolutePosition);
   const lastRelPos = useRef(piece.relativePosition);
-  const moving = useRef(false);
+  const isAnimating = useRef(false);
 
   useEffect(() => {
+    // Si la posición lógica cambió, disparamos la animación
     if (piece.relativePosition !== lastRelPos.current) {
       const start = lastRelPos.current;
       const end = piece.relativePosition;
       
-      // Si es un salto grande (cárcel o salida), teletransportar
-      if (start === -1 || end === -1 || Math.abs(end - start) > 12) {
-        setDisplayAbsPos(piece.absolutePosition);
-      } else {
-        // Animación paso a paso
-        moving.current = true;
-        let current = start;
-        const interval = setInterval(() => {
-          if (current < end) current++;
-          else if (current > end) current--;
-          
-          setDisplayAbsPos(getAbsFromRel(current, color));
-          
-          if (current === end) {
-            clearInterval(interval);
-            moving.current = false;
-          }
-        }, 150);
-        return () => clearInterval(interval);
-      }
+      // Actualizamos el ref inmediatamente para que el siguiente render sepa que ya procesamos esto
       lastRelPos.current = end;
-    } else {
+
+      // Si es un salto "imposible" (como volver a la cárcel o un reset), teletransportar
+      // Excepto si es una salida de cárcel (de -1 a 0), que el usuario quiere ver
+      if (start === -1 && end === 0) {
+          // Dejar que anime o simplemente saltar, pero marcando que no es un error
+      } else if (start === -1 || end === -1 || Math.abs(end - start) > 12) {
         setDisplayAbsPos(piece.absolutePosition);
+        return;
+      }
+
+      // Animación paso a paso
+      isAnimating.current = true;
+      let current = start;
+      const interval = setInterval(() => {
+        if (current < end) current++;
+        else if (current > end) current--;
+        
+        setDisplayAbsPos(getAbsFromRel(current, color));
+        
+        if (current === end) {
+          clearInterval(interval);
+          isAnimating.current = false;
+        }
+      }, 120); // Un poco más rápido para mejor sensación
+
+      return () => {
+        clearInterval(interval);
+        isAnimating.current = false;
+      };
+    } else if (!isAnimating.current) {
+      // SOLO sincronizar si NO estamos en medio de una animación
+      // Esto evita que un re-render del padre por otra causa (ej. dados) 
+      // teletransporte la ficha al destino antes de tiempo.
+      setDisplayAbsPos(piece.absolutePosition);
     }
   }, [piece.relativePosition, piece.absolutePosition, color]);
 
