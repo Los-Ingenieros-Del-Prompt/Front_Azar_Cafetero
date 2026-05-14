@@ -247,6 +247,17 @@ const joinGame = useCallback((gameId: string, playerId: string, playerName: stri
     });
   }, []);
 
+  // ── Salir de cárcel ───────────────────────────────────────────────────────
+  const exitJail = useCallback((gameId: string, playerId: string) => {
+    const client = clientRef.current;
+    if (!client?.connected) return;
+
+    client.publish({
+      destination: `/app/game/${gameId}/exitJail`,
+      body: JSON.stringify({ playerId }),
+    });
+  }, []);
+
   // ── Cleanup ───────────────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
@@ -268,5 +279,6 @@ const joinGame = useCallback((gameId: string, playerId: string, playerName: stri
   rollDice,
   movePiece,
   passTurn,
+  exitJail,
 };
 }

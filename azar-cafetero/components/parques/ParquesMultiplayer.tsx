@@ -42,12 +42,23 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   const [selectedDiceSelection, setSelectedDiceSelection] = useState<number | null>(null);
   const hasJoinedRef = useRef(false);
 
-  const { isConnected, connectionStatus, error, gameState, connect, subscribeToGame, createGame, joinGame, startGame, rollDice, movePiece, passTurn } =
+  const { isConnected, connectionStatus, error, gameState, connect, subscribeToGame, createGame, joinGame, startGame, rollDice, movePiece, passTurn, exitJail } =
     useParquesWebSocket({ onError: (err) => console.error("[Parqués] WS error:", err) });
+
+  const [isAnimatingDice, setIsAnimatingDice] = useState(false);
+  const [mixedStateChoice, setMixedStateChoice] = useState<'pending' | 'move' | null>(null);
 
   useEffect(() => {
     if (!gameState?.diceRolled) {
       setSelectedDiceSelection(null);
+      setMixedStateChoice(null);
+      setIsAnimatingDice(false);
+    } else {
+      setIsAnimatingDice(true);
+      const timer = setTimeout(() => {
+        setIsAnimatingDice(false);
+      }, 1100);
+      return () => clearTimeout(timer);
     }
   }, [gameState?.diceRolled]);
 
@@ -74,36 +85,56 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   const isMyTurn = gameState?.currentPlayerId === playerId;
   const myPlayer = gameState?.players.find((p) => p.id === playerId) ?? null;
   const isHost = gameState?.players[0]?.id === playerId;
-  const canRoll = isMyTurn && !gameState?.diceRolled && (gameState?.players.length ?? 0) >= 2;
+  const canRoll = isMyTurn && !gameState?.diceRolled && (gameState?.players.length ?? 0) >= 2 && !isAnimatingDice;
 
   // Determinar si estamos en sala de espera
   const isWaiting = !gameState || 
                     gameState.state === "WAITING_FOR_PLAYERS" || 
                     (gameState.state === undefined && gameState.players.length < 2);
 
+  // Auto-release o estado mixto
+  useEffect(() => {
+    if (gameState?.diceRolled && !isAnimatingDice && isMyTurn && myPlayer) {
+      if (gameState.jailExitAvailable && !gameState.die1Used && !gameState.die2Used) {
+        const inJailCount = myPlayer.pieces.filter(p => p.inJail).length;
+        if (inJailCount === 4) {
+          exitJail(gameId, playerId);
+        } else if (inJailCount > 0 && inJailCount < 4 && !mixedStateChoice) {
+          setMixedStateChoice('pending');
+        }
+      }
+    }
+  }, [gameState?.diceRolled, isAnimatingDice, isMyTurn, myPlayer, gameState?.die1Used, gameState?.die2Used, gameState?.jailExitAvailable, mixedStateChoice, gameId, playerId, exitJail]);
+
   const hasAnyValidMove = useMemo(() => {
     if (!gameState?.diceRolled || !isMyTurn || !myPlayer) return false;
+    
+    // Si pueden salir de la cárcel y aún no lo han descartado
+    if (gameState.jailExitAvailable && mixedStateChoice !== 'move' && myPlayer.pieces.some(p => p.inJail)) {
+        return true;
+    }
+
     const d1Available = !gameState.die1Used;
     const d2Available = !gameState.die2Used;
     return myPlayer.pieces.some((piece) => {
-      if (piece.atHome) return false;
-      if (piece.inJail) return gameState.jailExitAvailable && (d1Available || d2Available);
+      if (piece.atHome || piece.inJail) return false;
+      
       const canMoveD1 = d1Available && piece.relativePosition + gameState.die1 <= 68;
       const canMoveD2 = d2Available && piece.relativePosition + gameState.die2 <= 68;
       const canMoveSum = d1Available && d2Available && piece.relativePosition + (gameState.die1 + gameState.die2) <= 68;
       return canMoveD1 || canMoveD2 || canMoveSum;
     });
-  }, [gameState, isMyTurn, myPlayer]);
+  }, [gameState, isMyTurn, myPlayer, mixedStateChoice]);
 
   // Fichas que se pueden mover después de tirar el dado
   const movablePieces = useMemo<PieceDTO[]>(() => {
-    if (!gameState?.diceRolled || !isMyTurn || !myPlayer) return [];
+    if (!gameState?.diceRolled || !isMyTurn || !myPlayer || isAnimatingDice || mixedStateChoice === 'pending') return [];
+    
     const d1Available = !gameState.die1Used;
     const d2Available = !gameState.die2Used;
     
     return myPlayer.pieces.filter((piece) => {
-      if (piece.atHome) return false;
-      if (piece.inJail) return gameState.jailExitAvailable && (d1Available || d2Available);
+      if (piece.atHome || piece.inJail) return false;
       
       const canMoveD1 = d1Available && piece.relativePosition + gameState.die1 <= 68;
       const canMoveD2 = d2Available && piece.relativePosition + gameState.die2 <= 68;
@@ -115,12 +146,12 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
       
       return canMoveD1 || canMoveD2 || canMoveSum;
     });
-  }, [gameState, isMyTurn, myPlayer, selectedDiceSelection]);
+  }, [gameState, isMyTurn, myPlayer, selectedDiceSelection, isAnimatingDice, mixedStateChoice]);
 
   const handleRollDice = () => { if (canRoll) rollDice(gameId, playerId); };
   
   const handlePieceClick = (pieceId: string) => {
-    if (!gameState?.diceRolled || !isMyTurn) return;
+    if (!gameState?.diceRolled || !isMyTurn || isAnimatingDice || mixedStateChoice === 'pending') return;
     
     const d1Available = !gameState.die1Used;
     const d2Available = !gameState.die2Used;
@@ -139,6 +170,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   };
 
   const handleSelectDice = (selection: number) => {
+    if (isAnimatingDice || mixedStateChoice === 'pending') return;
     if (selection === selectedDiceSelection) {
         setSelectedDiceSelection(null); // Toggle off
     } else {
@@ -423,7 +455,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
           )}
 
           {/* Panel flotante de selección de fichas */}
-          {gameState.diceRolled && isMyTurn && movablePieces.length > 0 && (
+          {gameState.diceRolled && isMyTurn && movablePieces.length > 0 && mixedStateChoice !== 'pending' && (
             <div className="absolute bottom-60 right-8 z-40 flex flex-col items-end gap-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
               <p className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-full text-xs font-black uppercase tracking-tighter text-emerald-400 border border-emerald-500/30 shadow-xl">
                 {selectedDiceSelection ? "¿Qué ficha quieres mover?" : "Selecciona un dado"}
@@ -455,7 +487,31 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
             </div>
           )}
 
-          {gameState.diceRolled && isMyTurn && !hasAnyValidMove && (
+          {/* Mixed State Options */}
+          {gameState.diceRolled && isMyTurn && mixedStateChoice === 'pending' && !isAnimatingDice && (
+            <div className="absolute bottom-60 right-8 z-40 flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
+              <p className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-full text-xs font-black uppercase tracking-tighter text-emerald-400 border border-emerald-500/30 shadow-xl text-center">
+                Has sacado par, ¿qué deseas hacer?
+              </p>
+              <button
+                onClick={() => {
+                  exitJail(gameId, playerId);
+                  setMixedStateChoice(null);
+                }}
+                className="bg-emerald-600/90 hover:bg-emerald-500 text-white font-black px-6 py-4 rounded-2xl shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-105 active:scale-95 uppercase tracking-widest border border-emerald-400"
+              >
+                Salir de cárcel
+              </button>
+              <button
+                onClick={() => setMixedStateChoice('move')}
+                className="bg-blue-600/90 hover:bg-blue-500 text-white font-black px-6 py-4 rounded-2xl shadow-[0_0_30px_rgba(37,99,235,0.4)] transition-all hover:scale-105 active:scale-95 uppercase tracking-widest border border-blue-400"
+              >
+                Mover fichas
+              </button>
+            </div>
+          )}
+
+          {gameState.diceRolled && isMyTurn && !hasAnyValidMove && !isAnimatingDice && mixedStateChoice !== 'pending' && (
             <div className="absolute bottom-60 right-8 z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
               <button
                 onClick={() => passTurn(gameId, playerId)}
