@@ -258,6 +258,18 @@ const joinGame = useCallback((gameId: string, playerId: string, playerName: stri
     });
   }, []);
 
+  // ── Salir del juego ───────────────────────────────────────────────────────
+  const leaveGame = useCallback((gameId: string, playerId: string) => {
+    const client = clientRef.current;
+    if (!client?.connected) return;
+
+    console.log("[Parqués WS] Leaving game:", { gameId, playerId });
+    client.publish({
+      destination: `/app/game/${gameId}/leave`,
+      body: JSON.stringify({ gameId, playerId }),
+    });
+  }, []);
+
   // ── Cleanup ───────────────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
@@ -280,5 +292,6 @@ const joinGame = useCallback((gameId: string, playerId: string, playerName: stri
   movePiece,
   passTurn,
   exitJail,
+  leaveGame,
 };
 }

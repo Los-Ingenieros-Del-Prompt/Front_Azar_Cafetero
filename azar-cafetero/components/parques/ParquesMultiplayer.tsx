@@ -186,7 +186,16 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     return (
       <div className="relative min-h-screen w-full text-white overflow-hidden" style={{ background: "#0a1f0a" }}>
         <ParquesBoard />
-        <GameControls onMenu={() => router.push("/lobby")} onExit={() => router.push("/")} />
+        <GameControls 
+          onMenu={() => {
+            leaveGame(gameId, playerId);
+            router.push("/lobby");
+          }} 
+          onExit={() => {
+            leaveGame(gameId, playerId);
+            router.push("/");
+          }} 
+        />
         {/* ▼ DISEÑO LIBRE ▼ */}
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center p-10 rounded-2xl border border-emerald-500/40 bg-black/70 max-w-sm">
@@ -211,7 +220,16 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     return (
       <div className="relative min-h-screen w-full text-white overflow-hidden" style={{ background: "#0a1f0a" }}>
         <ParquesBoard />
-        <GameControls onMenu={() => router.push("/lobby")} onExit={() => router.push("/")} />
+        <GameControls 
+          onMenu={() => {
+            leaveGame(gameId, playerId);
+            router.push("/lobby");
+          }} 
+          onExit={() => {
+            leaveGame(gameId, playerId);
+            router.push("/");
+          }} 
+        />
         
         {/* Decorative elements */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 z-0" />
@@ -331,7 +349,16 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     return (
       <div className="relative min-h-screen w-full text-white overflow-hidden" style={{ background: "#0a1f0a" }}>
         <ParquesBoard />
-        <GameControls onMenu={() => router.push("/lobby")} onExit={() => router.push("/")} />
+        <GameControls 
+          onMenu={() => {
+            leaveGame(gameId, playerId);
+            router.push("/lobby");
+          }} 
+          onExit={() => {
+            leaveGame(gameId, playerId);
+            router.push("/");
+          }} 
+        />
         {/* ▼ DISEÑO LIBRE ▼ */}
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center p-10 rounded-2xl border-2 border-emerald-500/50 bg-black/90 max-w-md w-full mx-4">
@@ -375,7 +402,16 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   return (
     <div className="relative w-full text-white overflow-hidden" style={{ height: "100vh", display: "flex", flexDirection: "column", userSelect: "none", background: "#0a1f0a" }}>
       <ParquesBoard />
-      <GameControls onMenu={() => router.push("/lobby")} onExit={() => router.push("/")} />
+      <GameControls 
+        onMenu={() => {
+          leaveGame(gameId, playerId);
+          router.push("/lobby");
+        }} 
+        onExit={() => {
+          leaveGame(gameId, playerId);
+          router.push("/");
+        }} 
+      />
 
       <div className="relative z-10 flex flex-col h-full overflow-hidden">
 
