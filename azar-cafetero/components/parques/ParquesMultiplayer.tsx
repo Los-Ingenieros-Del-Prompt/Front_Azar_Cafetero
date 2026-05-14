@@ -42,14 +42,14 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   const [selectedDiceSelection, setSelectedDiceSelection] = useState<number | null>(null);
   const hasJoinedRef = useRef(false);
 
+  const { isConnected, connectionStatus, error, gameState, connect, subscribeToGame, createGame, joinGame, startGame, rollDice, movePiece, passTurn } =
+    useParquesWebSocket({ onError: (err) => console.error("[Parqués] WS error:", err) });
+
   useEffect(() => {
     if (!gameState?.diceRolled) {
       setSelectedDiceSelection(null);
     }
   }, [gameState?.diceRolled]);
-
-  const { isConnected, connectionStatus, error, gameState, connect, subscribeToGame, createGame, joinGame, startGame, rollDice, movePiece, passTurn } =
-    useParquesWebSocket({ onError: (err) => console.error("[Parqués] WS error:", err) });
 
   // 1. Conectar al montar
   useEffect(() => { connect(); }, [connect]);
