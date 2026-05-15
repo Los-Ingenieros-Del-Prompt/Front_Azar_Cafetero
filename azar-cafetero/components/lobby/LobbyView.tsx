@@ -50,13 +50,7 @@ const COPY = {
 
 
 
-function TopBar({ userName, userAvatar, balance, onOpenProfile, onLogout }: {
-  userName: string;
-  userAvatar?: string;
-  balance?: number | null;
-  onOpenProfile?: () => void;
-  onLogout?: () => void;
-}) {
+function TopBar({ onLogout }: { onLogout?: () => void }) {
   return (
     <header
       style={{
@@ -87,6 +81,44 @@ function TopBar({ userName, userAvatar, balance, onOpenProfile, onLogout }: {
             Mesa abierta
           </div>
         </div>
+
+        <span style={{ width: 1, height: 28, background: PALETTE.creamSoft, opacity: 0.15, margin: "0 10px" }} />
+
+        <button
+          onClick={onLogout}
+          style={{
+            all: "unset",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "8px 16px",
+            borderRadius: 999,
+            background: "rgba(206,17,38,.08)",
+            border: `1px solid rgba(206,17,38,.2)`,
+            color: "#ff6b6b",
+            fontWeight: 700,
+            fontSize: 12,
+            letterSpacing: ".02em",
+            textTransform: "uppercase",
+            transition: "all .2s cubic-bezier(.2,.7,.3,1)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(206,17,38,.15)";
+            e.currentTarget.style.border = `1px solid rgba(206,17,38,.4)`;
+            e.currentTarget.style.transform = "translateY(-1px)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(206,17,38,.08)";
+            e.currentTarget.style.border = `1px solid rgba(206,17,38,.2)`;
+            e.currentTarget.style.transform = "";
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          Salir
+        </button>
       </div>
 
       {/* Nav links */}
@@ -99,130 +131,8 @@ function TopBar({ userName, userAvatar, balance, onOpenProfile, onLogout }: {
         <a style={{ color: PALETTE.creamSoft, opacity: 0.7, textDecoration: "none" }}>Ranking</a>
       </nav>
 
-      {/* User info */}
-      <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 13 }}>
-        {/* balance */}
-        {balance != null && (
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "7px 14px",
-              borderRadius: 999,
-              background: "rgba(255,255,255,.05)",
-              border: `1px solid ${PALETTE.creamSoft}1a`,
-              color: PALETTE.cream,
-              fontWeight: 700,
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16">
-              <ellipse cx="8" cy="8" rx="4.5" ry="6.5" fill={PALETTE.amarillo} transform="rotate(-20 8 8)" />
-              <path d="M 8 1.5 Q 5 8 8 14.5" stroke="rgba(0,0,0,.45)" strokeWidth="1" fill="none" transform="rotate(-20 8 8)" />
-            </svg>
-            {balance.toLocaleString("es-CO")}
-            <span style={{ opacity: 0.55, fontWeight: 500, fontSize: 11 }}>granos</span>
-          </span>
-        )}
-
-        {/* avatar & logout */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button
-            onClick={onOpenProfile}
-            style={{
-              all: "unset",
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "4px 12px 4px 4px",
-              borderRadius: 999,
-              background: "rgba(255,255,255,.05)",
-              border: `1px solid ${PALETTE.creamSoft}1a`,
-              color: PALETTE.creamSoft,
-              fontWeight: 600,
-              transition: "background .2s, transform .2s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,.1)";
-              e.currentTarget.style.transform = "translateY(-1px)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,.05)";
-              e.currentTarget.style.transform = "";
-            }}
-          >
-            <span
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 999,
-                background: `linear-gradient(135deg, ${PALETTE.amarillo}, ${PALETTE.rojo})`,
-                border: `2px solid ${PALETTE.deep}`,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontWeight: 800,
-                fontSize: 12,
-                color: "#fff",
-                overflow: "hidden",
-                flexShrink: 0,
-              }}
-            >
-              {userAvatar?.startsWith("http") ? (
-                <img src={userAvatar} alt={userName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              ) : (
-                userName.charAt(0).toUpperCase()
-              )}
-            </span>
-            <span style={{ fontSize: 13 }}>{userName}</span>
-          </button>
-
-          <div style={{ width: 1, height: 20, background: PALETTE.creamSoft, opacity: 0.1, margin: "0 4px" }} />
-
-          <button
-            onClick={onLogout}
-            style={{
-              all: "unset",
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "8px 16px",
-              borderRadius: 999,
-              background: "rgba(206,17,38,.08)",
-              border: `1px solid rgba(206,17,38,.2)`,
-              color: "#ff6b6b",
-              fontWeight: 700,
-              fontSize: 12,
-              letterSpacing: ".02em",
-              textTransform: "uppercase",
-              transition: "all .2s cubic-bezier(.2,.7,.3,1)",
-              position: "relative",
-              overflow: "hidden",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(206,17,38,.15)";
-              e.currentTarget.style.border = `1px solid rgba(206,17,38,.4)`;
-              e.currentTarget.style.transform = "translateY(-1px)";
-              e.currentTarget.style.boxShadow = "0 4px 15px rgba(206,17,38,.2)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(206,17,38,.08)";
-              e.currentTarget.style.border = `1px solid rgba(206,17,38,.2)`;
-              e.currentTarget.style.transform = "";
-              e.currentTarget.style.boxShadow = "none";
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            Salir
-          </button>
-        </div>
-      </div>
+      {/* Spacer to balance the header (since info is now in HUD) */}
+      <div style={{ width: 140 }} />
     </header>
   );
 }
@@ -386,13 +296,7 @@ export default function LobbyView() {
         <LobbyFireflies count={14} />
 
         {/* Top bar */}
-        <TopBar
-          userName={user?.name || "Invitado"}
-          userAvatar={user?.avatarUrl}
-          balance={0} // Balance is handled by PlayerHUD, but we show a placeholder or fetch it
-          onOpenProfile={() => setPanelOpen(true)}
-          onLogout={handleLogout}
-        />
+        <TopBar onLogout={handleLogout} />
 
         {/* Hero heading */}
         <Hero />
