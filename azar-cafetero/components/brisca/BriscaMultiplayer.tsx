@@ -14,7 +14,6 @@ import {
   BotDifficulty,
 } from "@/hooks/useBriscaWebSocket";
 import { useBalance } from "@/hooks/useBalance";
-import { useGameWebSocket } from "@/hooks/useGameWebSocket";
 
 // ============ TYPE DEFINITIONS ============
 type Suit = "Oros" | "Copas" | "Espadas" | "Bastos";
@@ -271,9 +270,10 @@ interface BriscaMultiplayerProps {
   userName?: string;
   userId?: string;
   mockMode?: boolean;
+  onLeaveTable?: (tableId: string, playerId: string, playerName: string) => void;
 }
 
-export default function BriscaMultiplayer({ gameId: propGameId, userName, userId, mockMode = false }: BriscaMultiplayerProps) {
+export default function BriscaMultiplayer({ gameId: propGameId, userName, userId, mockMode = false, onLeaveTable }: BriscaMultiplayerProps) {
   const router = useRouter();
   const { user } = useUserContext();
   const [playerId] = useState(() => userId || user?.userId || `player-${Math.random().toString(36).slice(2, 8)}`);
@@ -309,7 +309,7 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   const { isConnected, connectionStatus, error, gameState, connect, createGame, joinGame, startGame, playCard, requestGameState, addBot, leaveGame } =
     useBriscaWebSocket({ onError:(err)=>console.error("[Brisca] Error:",err) });
 
-  const { leaveTable } = useGameWebSocket();
+  const leaveTable = onLeaveTable ?? (() => {});
 
   useEffect(()=>{
     if (mockMode) return;

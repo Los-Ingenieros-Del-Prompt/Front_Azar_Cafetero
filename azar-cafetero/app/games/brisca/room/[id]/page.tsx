@@ -14,22 +14,21 @@ export default function BriscaRoomPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
   const { user, isLoading } = useUserContext();
-  const isLocalDevMock = process.env.NODE_ENV === "development";
 
-  const { connect: connectLobby, isConnected: isLobbyConnected, joinTable: joinLobbyTable } = useGameWebSocket();
+  const { connect: connectLobby, isConnected: isLobbyConnected, joinTable: joinLobbyTable, leaveTable } = useGameWebSocket();
 
   useEffect(() => {
-    if (!isLocalDevMock && !isLoading && !user) {
+    if (!isLoading && !user) {
       router.replace("/");
     }
-  }, [isLocalDevMock, user, isLoading, router]);
+  }, [user, isLoading, router]);
 
   // Connect to Lobby WebSocket to maintain table session
   useEffect(() => {
-    if (!isLocalDevMock && user) {
+    if (user) {
       connectLobby();
     }
-  }, [isLocalDevMock, user, connectLobby]);
+  }, [user, connectLobby]);
 
   // Join the table in the Lobby WebSocket to set session attributes for cleanup
   useEffect(() => {
@@ -38,7 +37,7 @@ export default function BriscaRoomPage({ params }: PageProps) {
     }
   }, [isLobbyConnected, user, id, joinLobbyTable]);
 
-  if (!isLocalDevMock && isLoading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900">
         <Loader2 className="w-8 h-8 animate-spin text-yellow-500" />
@@ -48,5 +47,5 @@ export default function BriscaRoomPage({ params }: PageProps) {
 
   if (!user) return null;
 
-  return <BriscaMultiplayer gameId={id} userName={user.name} userId={user.userId} />;
+  return <BriscaMultiplayer gameId={id} userName={user.name} userId={user.userId} onLeaveTable={leaveTable} />;
 }
