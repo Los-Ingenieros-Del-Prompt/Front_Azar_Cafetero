@@ -121,16 +121,6 @@ function TopBar({ onLogout }: { onLogout?: () => void }) {
         </button>
       </div>
 
-      {/* Nav links */}
-      <nav style={{ display: "flex", alignItems: "center", gap: 28, fontSize: 13, fontWeight: 600 }}>
-        <a style={{ color: PALETTE.cream, opacity: 1, textDecoration: "none", position: "relative" }}>
-          Mesas
-          <span style={{ position: "absolute", left: 0, right: 0, bottom: -8, height: 2, background: PALETTE.amarillo, borderRadius: 1 }} />
-        </a>
-        <a style={{ color: PALETTE.creamSoft, opacity: 0.7, textDecoration: "none" }}>Amigos</a>
-        <a style={{ color: PALETTE.creamSoft, opacity: 0.7, textDecoration: "none" }}>Ranking</a>
-      </nav>
-
       {/* Spacer to balance the header (since info is now in HUD) */}
       <div style={{ width: 140 }} />
     </header>

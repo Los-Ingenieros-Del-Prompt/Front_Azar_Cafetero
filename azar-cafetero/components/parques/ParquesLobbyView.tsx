@@ -9,7 +9,7 @@ import ProfilePanel from "@/components/profile/ProfilePanel";
 import LobbyBackdrop from "@/components/lobby/LobbyBackdrop";
 import LobbyFireflies from "@/components/lobby/LobbyFireflies";
 import Sidebar from "./Sidebar";
-import TableCard, { CreateTableTile } from "./TableCard";
+import TableCard from "./TableCard";
 import CreateTableModal from "./CreateTableModal";
 
 const PALETTE = {
@@ -327,7 +327,7 @@ export default function ParquesLobbyView() {
           flex: 1,
           overflowY: 'auto'
         }}>
-          <CreateTableTile palette={PALETTE} onClick={() => setCreateOpen(true)} />
+
           {visible.map((t, idx) => (
             <div key={t.tableId} style={{
               animation: `card-enter .55s ${0.04 * idx}s cubic-bezier(.2,.7,.3,1) backwards`,
