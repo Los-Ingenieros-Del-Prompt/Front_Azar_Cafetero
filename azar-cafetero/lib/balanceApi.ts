@@ -34,7 +34,7 @@ export async function claimDailyBonus(): Promise<{
   amount: number;
   transactionId: string;
 }> {
-  const res = await fetch(`${GATEWAY}/player/bonus`, {
+  const res = await fetch(`${GATEWAY}/api/player/bonus`, {
     method: "POST",
     headers: authHeaders(),
   });
