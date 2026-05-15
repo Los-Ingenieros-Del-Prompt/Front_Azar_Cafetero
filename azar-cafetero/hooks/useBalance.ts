@@ -10,14 +10,9 @@ import {
   BalanceSseEvent,
 } from "@/lib/balanceApi";
 
-// Gateway normal para REST API
+// Gateway normal para REST API y SSE
 const GATEWAY =
   process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
-
-// URL directa al ALB para SSE (bypassea Vercel)
-const ALB =
-  process.env.NEXT_PUBLIC_LOBBY_DIRECT_URL ??
-  "http://azar-alb-774975018.us-east-1.elb.amazonaws.com";
 
 // Monto del bono diario — debe coincidir con Balance.DAILY_BONUS en el backend
 const DAILY_BONUS_AMOUNT = 100;
@@ -83,8 +78,8 @@ export function useBalance(): UseBalanceReturn {
     const token = getToken();
 
     const sseUrl = token
-      ? `${ALB}/api/player/balance/live?token=${encodeURIComponent(token)}`
-      : `${ALB}/api/player/balance/live`;
+      ? `${GATEWAY}/api/player/balance/live?token=${encodeURIComponent(token)}`
+      : `${GATEWAY}/api/player/balance/live`;
 
     const es = new EventSource(sseUrl);
 
