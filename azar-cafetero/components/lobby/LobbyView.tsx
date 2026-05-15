@@ -6,8 +6,7 @@ import { useUserContext } from "@/context/UserContext";
 import PlayerHUD from "@/components/lobby/PlayerHUD";
 import LobbyBackdrop from "@/components/lobby/LobbyBackdrop";
 import LobbyFireflies from "@/components/lobby/LobbyFireflies";
-import GameCard, { MysteryCard } from "@/components/lobby/LobbyGameCard";
-import MesaSetupModal from "@/components/lobby/MesaSetupModal";
+import LobbyGameCard, { MysteryCard } from "@/components/lobby/LobbyGameCard";
 import { ParquesCardArt, BriscaCardArt } from "@/components/lobby/LobbyCardArt";
 
 // ─── Palette & Copy ───────────────────────────────────────────────────────────
@@ -47,28 +46,7 @@ const COPY = {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function Kbd({ children }: { children: React.ReactNode }) {
-  return (
-    <kbd
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minWidth: 22,
-        height: 22,
-        padding: "0 6px",
-        borderRadius: 5,
-        border: "1px solid rgba(229,216,181,.18)",
-        background: "rgba(255,255,255,.04)",
-        fontFamily: "ui-monospace, monospace",
-        fontSize: 11,
-        color: "inherit",
-      }}
-    >
-      {children}
-    </kbd>
-  );
-}
+
 
 function TopBar({ userName, userAvatar, balance, onOpenProfile }: {
   userName: string;
@@ -253,43 +231,7 @@ function Hero() {
   );
 }
 
-function LobbyFooter() {
-  return (
-    <footer
-      style={{
-        padding: "16px 56px 24px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        position: "relative",
-        zIndex: 3,
-        color: PALETTE.creamSoft,
-        fontSize: 12,
-        animation: "hero-in .8s .5s ease-out backwards",
-      }}
-    >
-      <span style={{ opacity: 0.55, display: "inline-flex", alignItems: "center", gap: 12 }}>
-        <Kbd>←</Kbd><Kbd>→</Kbd> navegá &nbsp;·&nbsp; <Kbd>Enter</Kbd> entrá &nbsp;·&nbsp; <Kbd>Esc</Kbd> salí
-      </span>
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 18, opacity: 0.85 }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-          <span style={{ width: 8, height: 8, borderRadius: 999, background: PALETTE.verde, boxShadow: `0 0 8px ${PALETTE.verde}` }} />
-          <span style={{ fontWeight: 700, color: PALETTE.cream }}>1.847</span>
-          <span style={{ opacity: 0.6 }}>cafeteros en mesa</span>
-        </span>
-        <span style={{ width: 1, height: 14, background: PALETTE.creamSoft, opacity: 0.2 }} />
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, opacity: 0.7 }}>
-          <span style={{ display: "inline-flex" }}>
-            <span style={{ width: 14, height: 4, background: PALETTE.amarillo }} />
-            <span style={{ width: 14, height: 4, background: PALETTE.azul }} />
-            <span style={{ width: 14, height: 4, background: PALETTE.rojo }} />
-          </span>
-          Hecho con tinto en Colombia
-        </span>
-      </span>
-    </footer>
-  );
-}
+
 
 // ─── Main Export ──────────────────────────────────────────────────────────────
 
@@ -297,15 +239,10 @@ export default function LobbyView() {
   const router = useRouter();
   const { logout } = useUserContext();
 
-  const [modalGame, setModalGame] = useState<{ id: string; title: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const openMesa = (id: string) => {
-    const game =
-      id === "parques"
-        ? { id: "parques", title: "Parqués" }
-        : { id: "brisca", title: "Brisca" };
-    setModalGame(game);
+    router.push(`/${id}`);
   };
 
   const handleLogout = () => {
@@ -391,7 +328,7 @@ export default function LobbyView() {
           style={{
             flex: 1,
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             justifyContent: "center",
             gap: 56,
             padding: "8px 56px 40px",
@@ -400,7 +337,7 @@ export default function LobbyView() {
             flexWrap: "wrap",
           }}
         >
-          <GameCard
+          <LobbyGameCard
             id="parques"
             idx="I"
             title="Parqués"
@@ -413,7 +350,7 @@ export default function LobbyView() {
             delay={0.15}
           />
 
-          <GameCard
+          <LobbyGameCard
             id="brisca"
             idx="II"
             title="Brisca"
@@ -429,15 +366,7 @@ export default function LobbyView() {
           <MysteryCard delay={0.45} />
         </main>
 
-        {/* Footer */}
-        <LobbyFooter />
 
-        {/* Setup modal */}
-        <MesaSetupModal
-          open={!!modalGame}
-          game={modalGame}
-          onClose={() => setModalGame(null)}
-        />
 
         {/* Toast */}
         {toast && (
