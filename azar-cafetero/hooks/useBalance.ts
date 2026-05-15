@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState, useRef, useCallback } from "react";
 import { getToken } from "@/lib/auth";
 import {
@@ -9,7 +10,14 @@ import {
   BalanceSseEvent,
 } from "@/lib/balanceApi";
 
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+// Gateway normal para REST API
+const GATEWAY =
+  process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+
+// URL directa al ALB para SSE (bypassea Vercel)
+const ALB =
+  process.env.NEXT_PUBLIC_LOBBY_DIRECT_URL ??
+  "http://azar-alb-774975018.us-east-1.elb.amazonaws.com";
 
 // Monto del bono diario — debe coincidir con Balance.DAILY_BONUS en el backend
 const DAILY_BONUS_AMOUNT = 100;
@@ -23,7 +31,8 @@ export interface UseBalanceReturn {
   error: string | null;
   claimBonus: () => Promise<void>;
   claimingBonus: boolean;
-  /** Fuerza recarga del saldo desde el servidor (útil al terminar una partida) */
+
+  /** Fuerza recarga del saldo desde el servidor */
   refreshBalance: () => Promise<void>;
 }
 
@@ -34,15 +43,19 @@ export function useBalance(): UseBalanceReturn {
   const [diff, setDiff] = useState<string | null>(null);
   const [claimingBonus, setClaimingBonus] = useState(false);
   const [countdown, setCountdown] = useState<string | null>(null);
+
   const diffTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadBalance = useCallback(async () => {
     try {
       const d = await getBalance();
+
       setData(d);
       setCountdown(timeUntilNextBonus(d.nextBonusAt));
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Error al cargar saldo";
+      const msg =
+        e instanceof Error ? e.message : "Error al cargar saldo";
+
       setError(msg);
     }
   }, []);
@@ -55,9 +68,11 @@ export function useBalance(): UseBalanceReturn {
   // Countdown del bono
   useEffect(() => {
     if (!data?.nextBonusAt) return;
+
     const interval = setInterval(() => {
       setCountdown(timeUntilNextBonus(data.nextBonusAt));
     }, 60_000);
+
     return () => clearInterval(interval);
   }, [data?.nextBonusAt]);
 
@@ -66,46 +81,67 @@ export function useBalance(): UseBalanceReturn {
     if (loading) return;
 
     const token = getToken();
+
     const sseUrl = token
-      ? `${GATEWAY}/api/player/balance/live?token=${encodeURIComponent(token)}`
-      : `${GATEWAY}/api/player/balance/live`;
+      ? `${ALB}/api/player/balance/live?token=${encodeURIComponent(token)}`
+      : `${ALB}/api/player/balance/live`;
 
     const es = new EventSource(sseUrl);
 
     es.addEventListener("balance-update", (e: MessageEvent) => {
       try {
         const event: BalanceSseEvent = JSON.parse(e.data);
+
         setData((prev) =>
-          prev ? { ...prev, amount: event.balance } : prev
+          prev
+            ? {
+                ...prev,
+                amount: event.balance,
+              }
+            : prev
         );
+
         setDiff(event.diff);
-        if (diffTimerRef.current) clearTimeout(diffTimerRef.current);
-        diffTimerRef.current = setTimeout(() => setDiff(null), 2500);
+
+        if (diffTimerRef.current) {
+          clearTimeout(diffTimerRef.current);
+        }
+
+        diffTimerRef.current = setTimeout(() => {
+          setDiff(null);
+        }, 2500);
       } catch {
         // ignore parse errors
       }
     });
 
-    es.onerror = () => { };
+    es.onerror = () => {
+      // silencioso — EventSource reconecta automáticamente
+    };
 
     return () => {
       es.close();
-      if (diffTimerRef.current) clearTimeout(diffTimerRef.current);
+
+      if (diffTimerRef.current) {
+        clearTimeout(diffTimerRef.current);
+      }
     };
   }, [loading]);
 
   /**
    * Reclama el bono diario.
-   * Actualiza el saldo de forma optimista (+100) sin esperar al SSE,
-   * para que la UI responda de inmediato aunque la conexión SSE tarde.
+   * Actualiza el saldo local inmediatamente sin esperar el SSE.
    */
   const claimBonus = useCallback(async () => {
     setClaimingBonus(true);
+
     try {
       await claimDailyBonus();
-      // Actualización optimista: suma el bono al saldo local
+
+      // Actualización optimista
       setData((prev) => {
         if (!prev) return prev;
+
         return {
           ...prev,
           amount: prev.amount + DAILY_BONUS_AMOUNT,
@@ -113,7 +149,11 @@ export function useBalance(): UseBalanceReturn {
         };
       });
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Error al reclamar bono";
+      const msg =
+        e instanceof Error
+          ? e.message
+          : "Error al reclamar bono";
+
       setError(msg);
     } finally {
       setClaimingBonus(false);
