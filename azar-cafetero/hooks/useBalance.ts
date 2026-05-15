@@ -27,13 +27,13 @@ export interface UseBalanceReturn {
 }
 
 export function useBalance(): UseBalanceReturn {
-  const [data, setData]                   = useState<BalanceData | null>(null);
-  const [loading, setLoading]             = useState(true);
-  const [error, setError]                 = useState<string | null>(null);
-  const [diff, setDiff]                   = useState<string | null>(null);
+  const [data, setData] = useState<BalanceData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [diff, setDiff] = useState<string | null>(null);
   const [claimingBonus, setClaimingBonus] = useState(false);
-  const [countdown, setCountdown]         = useState<string | null>(null);
-  const diffTimerRef                      = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [countdown, setCountdown] = useState<string | null>(null);
+  const diffTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadBalance = useCallback(async () => {
     try {
@@ -64,7 +64,7 @@ export function useBalance(): UseBalanceReturn {
   useEffect(() => {
     if (loading) return;
 
-    const es = new EventSource(`${GATEWAY}/player/balance/live`, {
+    const es = new EventSource(`${GATEWAY}/api/player/balance/live`, {
       withCredentials: true,
     });
 
@@ -82,7 +82,7 @@ export function useBalance(): UseBalanceReturn {
       }
     });
 
-    es.onerror = () => {};
+    es.onerror = () => { };
 
     return () => {
       es.close();
@@ -117,14 +117,14 @@ export function useBalance(): UseBalanceReturn {
   }, []);
 
   return {
-    amount:             data?.amount ?? null,
-    canReceiveBonus:    data?.canReceiveBonus ?? false,
+    amount: data?.amount ?? null,
+    canReceiveBonus: data?.canReceiveBonus ?? false,
     nextBonusCountdown: countdown,
     diff,
     loading,
     error,
     claimBonus,
     claimingBonus,
-    refreshBalance:     loadBalance,
+    refreshBalance: loadBalance,
   };
 }
