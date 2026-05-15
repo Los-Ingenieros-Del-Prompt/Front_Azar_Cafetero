@@ -15,7 +15,7 @@ export default function ParquesRoomPage({ params }: PageProps) {
   const router = useRouter();
   const { user, isLoading } = useUserContext();
 
-  const { connect: connectLobby, isConnected: isLobbyConnected, joinTable: joinLobbyTable } = useGameWebSocket();
+  const { connect: connectLobby, isConnected: isLobbyConnected, joinTable: joinLobbyTable, leaveTable } = useGameWebSocket();
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -47,5 +47,5 @@ export default function ParquesRoomPage({ params }: PageProps) {
 
   if (!user) return null;
 
-  return <ParquesMultiplayer gameId={id} userName={user.name} userId={user.userId} />;
+  return <ParquesMultiplayer gameId={id} userName={user.name} userId={user.userId} onLeaveTable={leaveTable} />;
 }

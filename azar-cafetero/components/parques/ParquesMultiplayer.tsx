@@ -11,7 +11,6 @@ import {
   PlayerDTO,
   PieceDTO,
 } from "@/hooks/useParquesWebSocket";
-import { useGameWebSocket } from "@/hooks/useGameWebSocket";
 import ParquesPieces from "./ParquesPieces";
 
 export const COLOR_STYLES: Record<string, { bg: string; border: string; text: string; hex: string }> = {
@@ -30,9 +29,10 @@ interface ParquesMultiplayerProps {
   gameId?: string;
   userName?: string;
   userId?: string;
+  onLeaveTable?: (tableId: string, playerId: string, playerName: string) => void;
 }
 
-export default function ParquesMultiplayer({ gameId: propGameId, userName, userId }: ParquesMultiplayerProps) {
+export default function ParquesMultiplayer({ gameId: propGameId, userName, userId, onLeaveTable }: ParquesMultiplayerProps) {
   const router = useRouter();
   const { user } = useUserContext();
 
@@ -49,7 +49,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     rollDice, movePiece, passTurn, exitJail, leaveGame, addBot,
   } = useParquesWebSocket({ onError: (err) => console.error("[Parqués] WS error:", err) });
 
-  const { leaveTable } = useGameWebSocket();
+  const leaveTable = onLeaveTable ?? (() => {});
 
   const [isAnimatingDice, setIsAnimatingDice] = useState(false);
   const [mixedStateChoice, setMixedStateChoice] = useState<'pending' | 'move' | null>(null);
