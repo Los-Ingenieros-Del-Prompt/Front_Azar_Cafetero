@@ -354,7 +354,7 @@ export default function LoginView() {
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
