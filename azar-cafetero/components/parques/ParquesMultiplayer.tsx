@@ -25,14 +25,15 @@ export const COLOR_EMOJI: Record<string, string> = {
   ROJO: "🔴", AMARILLO: "🟡", VERDE: "🟢", AZUL: "🔵",
 };
 
-// ─── Props ─────────────────────────────────────────────────────────────────────
+// FIX Bug 1 & 2: La victoria está en relativePosition === 70, no 68
+const VICTORY_RELATIVE = 70;
+
 interface ParquesMultiplayerProps {
   gameId?: string;
   userName?: string;
   userId?: string;
 }
 
-// ─── Componente ────────────────────────────────────────────────────────────────
 export default function ParquesMultiplayer({ gameId: propGameId, userName, userId }: ParquesMultiplayerProps) {
   const router = useRouter();
   const { user } = useUserContext();
@@ -71,39 +72,29 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     const prevPieces = prevMyPiecesRef.current;
 
     if (prevPieces) {
-      // Detectar si metí una ficha en meta
       const scored = prevPieces.some((prev) => {
         if (prev.atHome) return false;
         const current = myPlayer.pieces.find((p) => p.id === prev.id);
         return current?.atHome === true;
       });
+      if (scored) showToast("🏠 ¡Metiste una ficha!");
 
-      if (scored) {
-        showToast("🏠 ¡Metiste una ficha!");
-      }
-
-      // Detectar si me comieron una ficha (estaba en tablero, ahora en cárcel)
       const wasCaptured = prevPieces.some((prev) => {
         if (prev.inJail) return false;
         const current = myPlayer.pieces.find((p) => p.id === prev.id);
         return current?.inJail === true;
       });
-
-      if (wasCaptured) {
-        showToast("💀 ¡Te comieron una ficha!");
-      }
+      if (wasCaptured) showToast("💀 ¡Te comieron una ficha!");
     }
 
     prevMyPiecesRef.current = myPlayer.pieces;
   }, [gameState, playerId]);
 
-  // Limpiar timer al desmontar
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     };
   }, []);
-  // ─────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!gameState?.diceRolled) {
@@ -119,10 +110,8 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     }
   }, [gameState?.diceRolled]);
 
-  // 1. Conectar al montar
   useEffect(() => { connect(); }, [connect]);
 
-  // 2. Cuando conecta: suscribirse al topic y crear partida
   useEffect(() => {
     if (!isConnected || hasJoinedRef.current) return;
     hasJoinedRef.current = true;
@@ -145,8 +134,8 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   const canRoll = isMyTurn && !gameState?.diceRolled && (gameState?.players.length ?? 0) >= 2 && !isAnimatingDice;
 
   const isWaiting = !gameState ||
-                    gameState.state === "WAITING_FOR_PLAYERS" ||
-                    (gameState.state === undefined && gameState.players.length < 2);
+    gameState.state === "WAITING_FOR_PLAYERS" ||
+    (gameState.state === undefined && gameState.players.length < 2);
 
   // Auto-release o estado mixto
   useEffect(() => {
@@ -162,21 +151,32 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     }
   }, [gameState?.diceRolled, isAnimatingDice, isMyTurn, myPlayer, gameState?.die1Used, gameState?.die2Used, gameState?.jailExitAvailable, mixedStateChoice, gameId, playerId, exitJail]);
 
+  /**
+   * FIX Bug 1 & 2: canMove ahora usa VICTORY_RELATIVE=70 correctamente.
+   * Una ficha puede moverse si relativePosition + steps <= 70.
+   */
+  const pieceCanMoveWithSteps = (piece: PieceDTO, steps: number): boolean => {
+    if (piece.atHome || piece.inJail) return false;
+    return piece.relativePosition + steps <= VICTORY_RELATIVE;
+  };
+
   const hasAnyValidMove = useMemo(() => {
     if (!gameState?.diceRolled || !isMyTurn || !myPlayer) return false;
 
+    // Si hay fichas en cárcel y puede salir con par
     if (gameState.jailExitAvailable && mixedStateChoice !== 'move' && myPlayer.pieces.some(p => p.inJail)) {
-        return true;
+      return true;
     }
 
     const d1Available = !gameState.die1Used;
     const d2Available = !gameState.die2Used;
+
     return myPlayer.pieces.some((piece) => {
       if (piece.atHome || piece.inJail) return false;
-
-      const canMoveD1 = d1Available && piece.relativePosition + gameState.die1 <= 68;
-      const canMoveD2 = d2Available && piece.relativePosition + gameState.die2 <= 68;
-      const canMoveSum = d1Available && d2Available && piece.relativePosition + (gameState.die1 + gameState.die2) <= 68;
+      // FIX: usar VICTORY_RELATIVE=70
+      const canMoveD1 = d1Available && pieceCanMoveWithSteps(piece, gameState.die1);
+      const canMoveD2 = d2Available && pieceCanMoveWithSteps(piece, gameState.die2);
+      const canMoveSum = d1Available && d2Available && pieceCanMoveWithSteps(piece, gameState.die1 + gameState.die2);
       return canMoveD1 || canMoveD2 || canMoveSum;
     });
   }, [gameState, isMyTurn, myPlayer, mixedStateChoice]);
@@ -190,9 +190,10 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     return myPlayer.pieces.filter((piece) => {
       if (piece.atHome || piece.inJail) return false;
 
-      const canMoveD1 = d1Available && piece.relativePosition + gameState.die1 <= 68;
-      const canMoveD2 = d2Available && piece.relativePosition + gameState.die2 <= 68;
-      const canMoveSum = d1Available && d2Available && piece.relativePosition + (gameState.die1 + gameState.die2) <= 68;
+      // FIX: usar pieceCanMoveWithSteps que usa VICTORY_RELATIVE=70
+      const canMoveD1 = d1Available && pieceCanMoveWithSteps(piece, gameState.die1);
+      const canMoveD2 = d2Available && pieceCanMoveWithSteps(piece, gameState.die2);
+      const canMoveSum = d1Available && d2Available && pieceCanMoveWithSteps(piece, gameState.die1 + gameState.die2);
 
       if (selectedDiceSelection === 1) return canMoveD1;
       if (selectedDiceSelection === 2) return canMoveD2;
@@ -212,10 +213,11 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
 
     let selection = selectedDiceSelection;
 
+    // Auto-seleccionar si solo hay un dado disponible
     if (!selection) {
       if (d1Available && !d2Available) selection = 1;
       else if (!d1Available && d2Available) selection = 2;
-      else return;
+      else return; // Hay dos dados disponibles, el usuario debe elegir primero
     }
 
     movePiece(gameId, playerId, pieceId, selection);
@@ -225,9 +227,9 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   const handleSelectDice = (selection: number) => {
     if (isAnimatingDice || mixedStateChoice === 'pending') return;
     if (selection === selectedDiceSelection) {
-        setSelectedDiceSelection(null);
+      setSelectedDiceSelection(null);
     } else {
-        setSelectedDiceSelection(selection);
+      setSelectedDiceSelection(selection);
     }
   };
 
@@ -241,16 +243,8 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
       <div className="relative min-h-screen w-full text-white overflow-hidden" style={{ background: "#0a1f0a" }}>
         <ParquesBoard />
         <GameControls
-          onMenu={() => {
-            leaveGame(gameId, playerId);
-            leaveTable(gameId, playerId, playerName);
-            router.push("/lobby");
-          }}
-          onExit={() => {
-            leaveGame(gameId, playerId);
-            leaveTable(gameId, playerId, playerName);
-            router.push("/lobby");
-          }}
+          onMenu={() => { leaveGame(gameId, playerId); leaveTable(gameId, playerId, playerName); router.push("/lobby"); }}
+          onExit={() => { leaveGame(gameId, playerId); leaveTable(gameId, playerId, playerName); router.push("/lobby"); }}
         />
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center p-10 rounded-2xl border border-emerald-500/40 bg-black/70 max-w-sm">
@@ -275,16 +269,8 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
       <div className="relative min-h-screen w-full text-white overflow-hidden" style={{ background: "#0a1f0a" }}>
         <ParquesBoard />
         <GameControls
-          onMenu={() => {
-            leaveGame(gameId, playerId);
-            leaveTable(gameId, playerId, playerName);
-            router.push("/lobby");
-          }}
-          onExit={() => {
-            leaveGame(gameId, playerId);
-            leaveTable(gameId, playerId, playerName);
-            router.push("/lobby");
-          }}
+          onMenu={() => { leaveGame(gameId, playerId); leaveTable(gameId, playerId, playerName); router.push("/lobby"); }}
+          onExit={() => { leaveGame(gameId, playerId); leaveTable(gameId, playerId, playerName); router.push("/lobby"); }}
         />
 
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 z-0" />
@@ -304,9 +290,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
 
             <div className="mb-10 text-left">
               <div className="flex items-center justify-between mb-4 px-2">
-                <p className="text-white/40 text-xs uppercase tracking-widest font-bold">
-                  Jugadores en línea
-                </p>
+                <p className="text-white/40 text-xs uppercase tracking-widest font-bold">Jugadores en línea</p>
                 <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-500/30">
                   {playersCount}/4
                 </span>
@@ -316,18 +300,13 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
                 {(gameState?.players ?? [{ id: playerId, name: playerName, color: "VERDE" as const }]).map((p: any) => {
                   const s = COLOR_STYLES[p.color] || COLOR_STYLES.VERDE;
                   return (
-                    <div
-                      key={p.id}
-                      className={`group flex items-center justify-between px-5 py-4 rounded-2xl border ${s.border}/40 ${s.bg} backdrop-blur-md transition-all hover:scale-[1.02]`}
-                    >
+                    <div key={p.id} className={`group flex items-center justify-between px-5 py-4 rounded-2xl border ${s.border}/40 ${s.bg} backdrop-blur-md transition-all hover:scale-[1.02]`}>
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-full bg-black/40 border border-white/10 flex items-center justify-center text-xl shadow-inner">
                           {COLOR_EMOJI[p.color] || "👤"}
                         </div>
                         <div>
-                          <span className={`font-black text-sm ${s.text} tracking-tight`}>
-                            {p.name}
-                          </span>
+                          <span className={`font-black text-sm ${s.text} tracking-tight`}>{p.name}</span>
                           <p className="text-[10px] text-white/30 font-bold uppercase tracking-wider">
                             {p.id === playerId ? "¡Eres tú!" : "Listo para jugar"}
                           </p>
@@ -344,9 +323,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
 
                 {playersCount < 4 && (
                   <div className="px-5 py-4 rounded-2xl border border-dashed border-white/10 bg-white/5 flex items-center gap-4 opacity-50">
-                    <div className="w-10 h-10 rounded-full border border-dashed border-white/20 flex items-center justify-center text-white/20">
-                      ?
-                    </div>
+                    <div className="w-10 h-10 rounded-full border border-dashed border-white/20 flex items-center justify-center text-white/20">?</div>
                     <span className="text-sm font-medium text-white/30 italic">Esperando a la banda...</span>
                   </div>
                 )}
@@ -405,16 +382,8 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
       <div className="relative min-h-screen w-full text-white overflow-hidden" style={{ background: "#0a1f0a" }}>
         <ParquesBoard />
         <GameControls
-          onMenu={() => {
-            leaveGame(gameId, playerId);
-            leaveTable(gameId, playerId, playerName);
-            router.push("/lobby");
-          }}
-          onExit={() => {
-            leaveGame(gameId, playerId);
-            leaveTable(gameId, playerId, playerName);
-            router.push("/lobby");
-          }}
+          onMenu={() => { leaveGame(gameId, playerId); leaveTable(gameId, playerId, playerName); router.push("/lobby"); }}
+          onExit={() => { leaveGame(gameId, playerId); leaveTable(gameId, playerId, playerName); router.push("/lobby"); }}
         />
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center p-10 rounded-2xl border-2 border-emerald-500/50 bg-black/90 max-w-md w-full mx-4">
@@ -457,28 +426,18 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   return (
     <div className="relative w-full text-white overflow-hidden" style={{ height: "100vh", display: "flex", flexDirection: "column", userSelect: "none", background: "#0a1f0a" }}>
       <GameControls
-        onMenu={() => {
-          leaveGame(gameId, playerId);
-          leaveTable(gameId, playerId, playerName);
-          router.push("/lobby");
-        }}
-        onExit={() => {
-          leaveGame(gameId, playerId);
-          leaveTable(gameId, playerId, playerName);
-          router.push("/lobby");
-        }}
+        onMenu={() => { leaveGame(gameId, playerId); leaveTable(gameId, playerId, playerName); router.push("/lobby"); }}
+        onExit={() => { leaveGame(gameId, playerId); leaveTable(gameId, playerId, playerName); router.push("/lobby"); }}
       />
 
       <div className="relative z-10 flex flex-col h-full overflow-hidden">
 
-        {/* Toast de eventos personales */}
         {toast && (
           <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 px-8 py-4 rounded-2xl bg-black/85 border border-emerald-400 text-emerald-300 text-base font-bold backdrop-blur-sm text-center shadow-2xl pointer-events-none">
             {toast}
           </div>
         )}
 
-        {/* Banner de error de dominio */}
         {error && (
           <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 px-6 py-3 rounded-xl bg-red-900/80 border border-red-500 text-red-200 text-sm font-bold backdrop-blur-sm">
             {error}
@@ -492,15 +451,9 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
           ))}
         </div>
 
-        {/* Centro — tablero + fichas en el mismo SVG */}
+        {/* Centro — tablero + fichas */}
         <div className="flex-1 flex items-center justify-center relative" style={{ minHeight: 0 }}>
-          <div
-            style={{
-              position: "relative",
-              width: "min(calc(100vh - 200px), calc(100vw - 120px))",
-              aspectRatio: "1 / 1",
-            }}
-          >
+          <div style={{ position: "relative", width: "min(calc(100vh - 200px), calc(100vw - 120px))", aspectRatio: "1 / 1" }}>
             <ParquesBoard>
               {gameState && (
                 <ParquesPieces
@@ -556,7 +509,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
             />
           )}
 
-          {/* Panel flotante de selección de fichas */}
+          {/* Panel de selección de fichas */}
           {gameState.diceRolled && isMyTurn && movablePieces.length > 0 && mixedStateChoice !== 'pending' && (
             <div className="absolute bottom-60 right-8 z-40 flex flex-col items-end gap-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
               <p className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-full text-xs font-black uppercase tracking-tighter text-emerald-400 border border-emerald-500/30 shadow-xl">
@@ -565,6 +518,8 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
               <div className="flex flex-col gap-2">
                 {movablePieces.map((piece) => {
                   const s = COLOR_STYLES[myPlayer?.color ?? "VERDE"];
+                  // FIX: calcular cuántos pasos faltan para la meta
+                  const stepsToVictory = VICTORY_RELATIVE - piece.relativePosition;
                   return (
                     <button
                       key={piece.id}
@@ -579,7 +534,11 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
                           Ficha {Number(piece.id.split("-piece-")[1] ?? 0) + 1}
                         </span>
                         <span className="text-[10px] text-white/50 font-medium">
-                          {piece.inJail ? "Liberar de la cárcel" : `Mover desde pos. ${piece.relativePosition}`}
+                          {piece.inJail
+                            ? "Liberar de la cárcel"
+                            : stepsToVictory <= 7
+                            ? `¡Faltan ${stepsToVictory} para la meta!`
+                            : `Pos. ${piece.relativePosition}`}
                         </span>
                       </div>
                     </button>
@@ -596,10 +555,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
                 Has sacado par, ¿qué deseas hacer?
               </p>
               <button
-                onClick={() => {
-                  exitJail(gameId, playerId);
-                  setMixedStateChoice(null);
-                }}
+                onClick={() => { exitJail(gameId, playerId); setMixedStateChoice(null); }}
                 className="bg-emerald-600/90 hover:bg-emerald-500 text-white font-black px-6 py-4 rounded-2xl shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-105 active:scale-95 uppercase tracking-widest border border-emerald-400"
               >
                 Salir de cárcel
@@ -608,18 +564,19 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
                 onClick={() => setMixedStateChoice('move')}
                 className="bg-blue-600/90 hover:bg-blue-500 text-white font-black px-6 py-4 rounded-2xl shadow-[0_0_30px_rgba(37,99,235,0.4)] transition-all hover:scale-105 active:scale-95 uppercase tracking-widest border border-blue-400"
               >
-                Mover fichas
+                Mover fichas activas
               </button>
             </div>
           )}
 
+          {/* FIX Bug 2: Solo mostrar "No hay movimientos" cuando realmente no hay */}
           {gameState.diceRolled && isMyTurn && !hasAnyValidMove && !isAnimatingDice && mixedStateChoice !== 'pending' && (
             <div className="absolute bottom-60 right-8 z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
               <button
                 onClick={() => passTurn(gameId, playerId)}
                 className="bg-red-600/90 hover:bg-red-500 text-white font-black px-6 py-4 rounded-2xl shadow-[0_0_30px_rgba(220,38,38,0.4)] transition-all hover:scale-105 active:scale-95 uppercase tracking-widest border border-red-400"
               >
-                No hay movimientos - Continuar
+                Sin movimientos válidos — Continuar
               </button>
             </div>
           )}
@@ -715,20 +672,26 @@ function DiceReveal({ die1, die2, die1Used, die2Used, active, selectedDice, onSe
   return (
     <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
       <div className="flex gap-6 items-center animate-in zoom-in fade-in duration-500">
-        <div className={`pointer-events-auto cursor-pointer transition-transform ${selectedDice === 1 ? "scale-110 ring-4 ring-emerald-500 rounded-3xl" : "hover:scale-105"}`} onClick={() => !rolling && !die1Used && onSelectDice(1)}>
+        <div
+          className={`pointer-events-auto cursor-pointer transition-transform ${selectedDice === 1 ? "scale-110 ring-4 ring-emerald-500 rounded-3xl" : "hover:scale-105"} ${die1Used ? "opacity-30 pointer-events-none" : ""}`}
+          onClick={() => !rolling && !die1Used && onSelectDice(1)}
+        >
           <DiceBox value={die1} rolling={rolling} used={die1Used} delay="0s" />
         </div>
 
         {!rolling && !die1Used && !die2Used && (
-            <button
-              className={`pointer-events-auto bg-emerald-500/80 hover:bg-emerald-500 text-white font-black px-3 py-1.5 rounded-lg text-xs transition-all ${selectedDice === 3 ? "scale-110 ring-2 ring-white shadow-[0_0_15px_rgba(16,185,129,0.5)]" : "hover:scale-105"}`}
-              onClick={() => onSelectDice(3)}
-            >
-              SUMA ({die1 + die2})
-            </button>
+          <button
+            className={`pointer-events-auto bg-emerald-500/80 hover:bg-emerald-500 text-white font-black px-3 py-1.5 rounded-lg text-xs transition-all ${selectedDice === 3 ? "scale-110 ring-2 ring-white shadow-[0_0_15px_rgba(16,185,129,0.5)]" : "hover:scale-105"}`}
+            onClick={() => onSelectDice(3)}
+          >
+            SUMA ({die1 + die2})
+          </button>
         )}
 
-        <div className={`pointer-events-auto cursor-pointer transition-transform ${selectedDice === 2 ? "scale-110 ring-4 ring-emerald-500 rounded-3xl" : "hover:scale-105"}`} onClick={() => !rolling && !die2Used && onSelectDice(2)}>
+        <div
+          className={`pointer-events-auto cursor-pointer transition-transform ${selectedDice === 2 ? "scale-110 ring-4 ring-emerald-500 rounded-3xl" : "hover:scale-105"} ${die2Used ? "opacity-30 pointer-events-none" : ""}`}
+          onClick={() => !rolling && !die2Used && onSelectDice(2)}
+        >
           <DiceBox value={die2} rolling={rolling} used={die2Used} delay="0.1s" />
         </div>
 
@@ -749,16 +712,11 @@ function DiceBox({ value, rolling, used, delay }: { value: number; rolling: bool
       style={{ animationDelay: delay }}
     >
       <div className="absolute inset-1.5 border border-slate-100 rounded-xl opacity-50" />
-
       <div className="grid grid-cols-3 grid-rows-3 gap-1.5 w-12 h-12">
         {getDiceDots(rolling ? Math.floor(Math.random() * 6) + 1 : value).map((dot, i) => (
-          <div
-            key={i}
-            className={`w-full h-full rounded-full ${dot ? "bg-slate-900 shadow-inner" : "bg-transparent"}`}
-          />
+          <div key={i} className={`w-full h-full rounded-full ${dot ? "bg-slate-900 shadow-inner" : "bg-transparent"}`} />
         ))}
       </div>
-
       {!rolling && (
         <div className="absolute -bottom-8 w-full h-3 bg-black/30 blur-lg rounded-full scale-125" />
       )}
