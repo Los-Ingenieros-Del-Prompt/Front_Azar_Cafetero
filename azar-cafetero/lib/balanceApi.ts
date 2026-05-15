@@ -14,7 +14,7 @@ export interface BalanceSseEvent {
 }
 
 export async function getBalance(): Promise<BalanceData> {
-  const res = await fetch(`${GATEWAY}/player/balance`, {
+  const res = await fetch(`${GATEWAY}/api/player/balance`, {
     credentials: "include",
     cache: "no-store",
   });
