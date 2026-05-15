@@ -1,528 +1,476 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { mockBuildingLayout } from "@/app/lobby/mockBuildingLayout";
-import PlayerHUD from "@/components/lobby/PlayerHUD";
 import { useUserContext } from "@/context/UserContext";
+import PlayerHUD from "@/components/lobby/PlayerHUD";
+import LobbyBackdrop from "@/components/lobby/LobbyBackdrop";
+import LobbyFireflies from "@/components/lobby/LobbyFireflies";
+import GameCard, { MysteryCard } from "@/components/lobby/LobbyGameCard";
+import MesaSetupModal from "@/components/lobby/MesaSetupModal";
+import { ParquesCardArt, BriscaCardArt } from "@/components/lobby/LobbyCardArt";
 
-interface Floor {
-  id: string;
-  number: number;
-  name: string;
-  route: string;
-  icon: string;
-  description: string;
-  available: boolean;
-  color: string;
+// ─── Palette & Copy ───────────────────────────────────────────────────────────
+
+const PALETTE = {
+  deep: "#0E1610",
+  deepSoft: "#1A241C",
+  cream: "#F7EFD9",
+  creamSoft: "#E5D8B5",
+  amarillo: "#FCD116",
+  azul: "#003893",
+  rojo: "#CE1126",
+  verde: "#27A86A",
+};
+
+const COPY = {
+  eyebrow: "Escogé tu mesa, parcero",
+  title: "La noche está",
+  titleAccent: "pa\u2019 jugar",
+  sub: (
+    <>
+      Dos clásicos colombianos. Una baraja, un tablero, los panas conectados y un tinto
+      caliente. <strong>Vos pedís la mesa.</strong>
+    </>
+  ),
+  parques: {
+    kicker: "Tablero · Tradición",
+    copy:
+      "Saque par y arranque. Aquí se reza, se sopla y se grita cuando le caen el cinco. El clásico de las tardes en familia.",
+  },
+  brisca: {
+    kicker: "Cartas · Baraja Española",
+    copy:
+      "40 cartas, una pinta de triunfo, dos parejas. Se gana con la mirada tanto como con la mano. Bueno pa\u2019 aprender rapidito.",
+  },
+};
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minWidth: 22,
+        height: 22,
+        padding: "0 6px",
+        borderRadius: 5,
+        border: "1px solid rgba(229,216,181,.18)",
+        background: "rgba(255,255,255,.04)",
+        fontFamily: "ui-monospace, monospace",
+        fontSize: 11,
+        color: "inherit",
+      }}
+    >
+      {children}
+    </kbd>
+  );
 }
 
-interface BuildingLayout {
-  floors: Floor[];
+function TopBar({ userName, userAvatar, balance, onOpenProfile }: {
+  userName: string;
+  userAvatar?: string;
+  balance?: number | null;
+  onOpenProfile?: () => void;
+}) {
+  return (
+    <header
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "22px 56px",
+        position: "relative",
+        zIndex: 4,
+        animation: "hero-in .8s ease-out",
+      }}
+    >
+      {/* Logo */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <div style={{ width: 52, height: 44, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <img
+            src="/images/logo.jpeg"
+            alt="Azar Cafetero"
+            style={{ width: 52, height: 44, objectFit: "contain" }}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
+        </div>
+        <div>
+          <div style={{ fontFamily: "DM Serif Display, serif", fontSize: 20, lineHeight: 1, color: PALETTE.cream }}>
+            Azar Cafetero
+          </div>
+          <div style={{ fontSize: 10, color: PALETTE.amarillo, opacity: 0.85, letterSpacing: ".16em", textTransform: "uppercase", marginTop: 3 }}>
+            Mesa abierta
+          </div>
+        </div>
+      </div>
+
+      {/* Nav links */}
+      <nav style={{ display: "flex", alignItems: "center", gap: 28, fontSize: 13, fontWeight: 600 }}>
+        <a style={{ color: PALETTE.cream, opacity: 1, textDecoration: "none", position: "relative" }}>
+          Mesas
+          <span style={{ position: "absolute", left: 0, right: 0, bottom: -8, height: 2, background: PALETTE.amarillo, borderRadius: 1 }} />
+        </a>
+        <a style={{ color: PALETTE.creamSoft, opacity: 0.7, textDecoration: "none" }}>Amigos</a>
+        <a style={{ color: PALETTE.creamSoft, opacity: 0.7, textDecoration: "none" }}>Ranking</a>
+      </nav>
+
+      {/* User info */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 13 }}>
+        {/* balance */}
+        {balance != null && (
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "7px 14px",
+              borderRadius: 999,
+              background: "rgba(255,255,255,.05)",
+              border: `1px solid ${PALETTE.creamSoft}1a`,
+              color: PALETTE.cream,
+              fontWeight: 700,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16">
+              <ellipse cx="8" cy="8" rx="4.5" ry="6.5" fill={PALETTE.amarillo} transform="rotate(-20 8 8)" />
+              <path d="M 8 1.5 Q 5 8 8 14.5" stroke="rgba(0,0,0,.45)" strokeWidth="1" fill="none" transform="rotate(-20 8 8)" />
+            </svg>
+            {balance.toLocaleString("es-CO")}
+            <span style={{ opacity: 0.55, fontWeight: 500, fontSize: 11 }}>granos</span>
+          </span>
+        )}
+
+        {/* avatar */}
+        <button
+          onClick={onOpenProfile}
+          style={{
+            all: "unset",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            color: PALETTE.creamSoft,
+            fontWeight: 600,
+          }}
+        >
+          <span
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 999,
+              background: `linear-gradient(135deg, ${PALETTE.amarillo}, ${PALETTE.rojo})`,
+              border: `2px solid ${PALETTE.deep}`,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 800,
+              fontSize: 12,
+              color: "#fff",
+              overflow: "hidden",
+            }}
+          >
+            {userAvatar?.startsWith("http") ? (
+              <img src={userAvatar} alt={userName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              userName.charAt(0).toUpperCase()
+            )}
+          </span>
+        </button>
+      </div>
+    </header>
+  );
 }
 
-interface FloorDTO {
-  name: string;
-  icon: string;
-  route: string;
+function Hero() {
+  return (
+    <section
+      style={{
+        textAlign: "center",
+        padding: "12px 48px 28px",
+        position: "relative",
+        zIndex: 3,
+      }}
+    >
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 12,
+          fontSize: 11,
+          fontWeight: 800,
+          letterSpacing: ".2em",
+          textTransform: "uppercase",
+          color: PALETTE.amarillo,
+          opacity: 0.95,
+          marginBottom: 16,
+          animation: "hero-in .7s ease-out",
+        }}
+      >
+        <span style={{ width: 24, height: 1, background: PALETTE.amarillo, opacity: 0.5 }} />
+        <span>✦ {COPY.eyebrow} ✦</span>
+        <span style={{ width: 24, height: 1, background: PALETTE.amarillo, opacity: 0.5 }} />
+      </div>
+      <h1
+        style={{
+          margin: 0,
+          fontFamily: "DM Serif Display, serif",
+          fontSize: 76,
+          lineHeight: 0.95,
+          color: PALETTE.cream,
+          letterSpacing: "-.02em",
+          animation: "hero-in .8s .1s ease-out backwards",
+        }}
+      >
+        {COPY.title}{" "}
+        <em
+          style={{
+            fontStyle: "italic",
+            color: PALETTE.amarillo,
+            textShadow: `0 4px 30px ${PALETTE.amarillo}55`,
+          }}
+        >
+          {COPY.titleAccent}
+        </em>
+      </h1>
+      <p
+        style={{
+          margin: "16px auto 0",
+          maxWidth: 560,
+          fontSize: 15,
+          lineHeight: 1.6,
+          color: PALETTE.creamSoft,
+          opacity: 0.82,
+          animation: "hero-in .8s .2s ease-out backwards",
+        }}
+      >
+        {COPY.sub}
+      </p>
+    </section>
+  );
 }
 
-const FLOOR_COLORS = ["#f472b6", "#facc15", "#34d399", "#60a5fa", "#a78bfa"];
-
-function mapDTOtoFloors(dtos: FloorDTO[]): Floor[] {
-  return dtos.map((dto, index) => ({
-    id: `floor-${index + 1}`,
-    number: index + 1,
-    name: dto.name,
-    icon: dto.icon,
-    route: dto.route,
-    description: "",
-    available: true,
-    color: FLOOR_COLORS[index % FLOOR_COLORS.length],
-  }));
+function LobbyFooter() {
+  return (
+    <footer
+      style={{
+        padding: "16px 56px 24px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        position: "relative",
+        zIndex: 3,
+        color: PALETTE.creamSoft,
+        fontSize: 12,
+        animation: "hero-in .8s .5s ease-out backwards",
+      }}
+    >
+      <span style={{ opacity: 0.55, display: "inline-flex", alignItems: "center", gap: 12 }}>
+        <Kbd>←</Kbd><Kbd>→</Kbd> navegá &nbsp;·&nbsp; <Kbd>Enter</Kbd> entrá &nbsp;·&nbsp; <Kbd>Esc</Kbd> salí
+      </span>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 18, opacity: 0.85 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <span style={{ width: 8, height: 8, borderRadius: 999, background: PALETTE.verde, boxShadow: `0 0 8px ${PALETTE.verde}` }} />
+          <span style={{ fontWeight: 700, color: PALETTE.cream }}>1.847</span>
+          <span style={{ opacity: 0.6 }}>cafeteros en mesa</span>
+        </span>
+        <span style={{ width: 1, height: 14, background: PALETTE.creamSoft, opacity: 0.2 }} />
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, opacity: 0.7 }}>
+          <span style={{ display: "inline-flex" }}>
+            <span style={{ width: 14, height: 4, background: PALETTE.amarillo }} />
+            <span style={{ width: 14, height: 4, background: PALETTE.azul }} />
+            <span style={{ width: 14, height: 4, background: PALETTE.rojo }} />
+          </span>
+          Hecho con tinto en Colombia
+        </span>
+      </span>
+    </footer>
+  );
 }
 
-const LOBBY_API = process.env.NEXT_PUBLIC_LOBBY_URL ?? "https://azar-cafetero.duckdns.org";
-
-async function fetchBuildingLayout(): Promise<BuildingLayout> {
-  if (!process.env.NEXT_PUBLIC_LOBBY_URL) return mockBuildingLayout;
-  try {
-    const res = await fetch(`${LOBBY_API}/api/building/layout`);
-    if (!res.ok) throw new Error(`Error al cargar el edificio: ${res.status}`);
-    const data: FloorDTO[] = await res.json();
-    return { floors: mapDTOtoFloors(data) };
-  } catch {
-    return mockBuildingLayout;
-  }
-}
+// ─── Main Export ──────────────────────────────────────────────────────────────
 
 export default function LobbyView() {
   const router = useRouter();
   const { logout } = useUserContext();
-  const [floors, setFloors] = useState<Floor[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [navigating, setNavigating] = useState<string | null>(null);
-  const [active, setActive] = useState<number>(0);
-  const touchStartX = useRef<number | null>(null);
 
-  useEffect(() => {
-    fetchBuildingLayout()
-      .then((data) => setFloors(data.floors))
-      .finally(() => setLoading(false));
-  }, []);
+  const [modalGame, setModalGame] = useState<{ id: string; title: string } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
-  const handleFloorClick = (floor: Floor): void => {
-    if (!floor.available || navigating) return;
-    setNavigating(floor.id);
-    router.push(floor.route);
+  const openMesa = (id: string) => {
+    const game =
+      id === "parques"
+        ? { id: "parques", title: "Parqués" }
+        : { id: "brisca", title: "Brisca" };
+    setModalGame(game);
   };
 
-  const goTo = (index: number) => {
-    setActive(Math.max(0, Math.min(index, floors.length - 1)));
+  const handleLogout = () => {
+    logout();
+    router.replace("/");
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3200);
   };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
-    const delta = touchStartX.current - e.changedTouches[0].clientX;
-    if (Math.abs(delta) > 50) goTo(active + (delta > 0 ? 1 : -1));
-    touchStartX.current = null;
-  };
-
-  const handleClaimDaily = () => router.push("/daily-reward");
-  const handleLogout = () => { logout(); router.replace("/"); };
 
   return (
     <>
+      {/* Fonts */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-        .lobby-root {
-          min-height: 100vh;
-          background-image:
-            linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.5)),
-            url('/images/backgroundLogin.jpg');
-          background-size: cover;
-          background-repeat: no-repeat;
-          background-position: center 50%;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 2rem 0;
-          font-family: 'DM Sans', sans-serif;
-          overflow: hidden;
+        @keyframes card-enter {
+          from { opacity: 0; transform: translateY(40px) scale(.96); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
         }
-
-        .lobby-header {
-          text-align: center;
-          margin-bottom: 3rem;
-          padding: 0 1.5rem;
-          animation: fadeDown 0.6s ease both;
+        @keyframes card-float {
+          0%, 100% { transform: translateY(0); }
+          50%      { transform: translateY(-6px); }
         }
-
-        .lobby-eyebrow {
-          font-size: 0.7rem;
-          letter-spacing: 0.35em;
-          text-transform: uppercase;
-          color: rgba(255,255,255,0.45);
-          margin-bottom: 0.75rem;
-          font-weight: 400;
-        }
-
-        .lobby-title {
-          font-family: 'Playfair Display', serif;
-          font-size: clamp(2rem, 4vw, 3rem);
-          font-weight: 700;
-          color: #fff;
-          line-height: 1.1;
-          margin-bottom: 0.6rem;
-        }
-
-        .lobby-sub {
-          font-size: 0.88rem;
-          color: rgba(255,255,255,0.5);
-          font-weight: 300;
-        }
-
-        .slider-viewport {
-          width: 100%;
-          max-width: 900px;
-          padding: 1rem 0 2rem;
-          position: relative;
-        }
-
-        .slider-track {
-          display: flex;
-          gap: 1.25rem;
-          padding: 0 calc(50% - 200px);
-          transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
-          will-change: transform;
-        }
-
-        .game-card {
-          flex-shrink: 0;
-          width: 400px;
-          min-height: 480px;
-          background: #fff;
-          border-radius: 24px;
-          padding: 2.75rem 2.5rem;
-          cursor: pointer;
-          position: relative;
-          overflow: hidden;
-          outline: none;
-          transition:
-            transform 0.45s cubic-bezier(0.4, 0, 0.2, 1),
-            opacity 0.45s ease,
-            box-shadow 0.45s ease;
-          display: flex;
-          flex-direction: column;
-          justify-content: flex-end;
-          user-select: none;
-        }
-
-        .game-card.is-inactive {
-          transform: scale(0.88);
-          opacity: 0.45;
-          cursor: default;
-          pointer-events: none;
-        }
-
-        .game-card.is-active {
-          transform: scale(1);
-          opacity: 1;
-          box-shadow: 0 32px 80px rgba(0,0,0,0.5);
-        }
-
-        .game-card.is-active:hover { transform: scale(1.02); }
-
-        .game-card.navigating {
-          opacity: 0.5;
-          pointer-events: none;
-        }
-
-        .card-bg {
-          position: absolute;
-          inset: 0;
-          background: var(--accent, #111);
-          opacity: 0.07;
-          transition: opacity 0.3s;
-        }
-
-        .game-card.is-active:hover .card-bg { opacity: 0.12; }
-
-        .card-accent {
-          position: absolute;
-          top: 0; left: 0; right: 0;
-          height: 4px;
-          background: var(--accent, #111);
-          border-radius: 24px 24px 0 0;
-        }
-
-        .card-icon-wrap {
-          position: absolute;
-          top: 2.5rem;
-          right: 2rem;
-          font-size: 6rem;
-          line-height: 1;
-          opacity: 0.15;
-          transition: opacity 0.3s, transform 0.3s;
-          pointer-events: none;
-        }
-
-        .game-card.is-active:hover .card-icon-wrap {
-          opacity: 0.22;
-          transform: scale(1.06) rotate(-4deg);
-        }
-
-        .card-content { position: relative; z-index: 1; }
-
-        .card-floor-label {
-          font-size: 0.68rem;
-          letter-spacing: 0.28em;
-          text-transform: uppercase;
-          color: var(--accent, #888);
-          font-weight: 500;
-          margin-bottom: 0.6rem;
-        }
-
-        .card-name {
-          font-family: 'Playfair Display', serif;
-          font-size: 2.4rem;
-          font-weight: 700;
-          color: #111;
-          line-height: 1.05;
-          margin-bottom: 0.75rem;
-        }
-
-        .card-desc {
-          font-size: 0.88rem;
-          color: #777;
-          font-weight: 300;
-          line-height: 1.6;
-          max-width: 280px;
-          margin-bottom: 2rem;
-        }
-
-        .card-cta {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.6rem;
-          background: #111;
-          color: #fff;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 0.82rem;
-          font-weight: 500;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
-          padding: 0.75rem 1.4rem;
-          border-radius: 100px;
-          border: none;
-          cursor: pointer;
-          transition: background 0.2s, gap 0.2s;
-        }
-
-        .game-card.is-active:hover .card-cta {
-          background: var(--accent, #111);
-          gap: 0.9rem;
-        }
-
-        .cta-spinner {
-          width: 14px;
-          height: 14px;
-          border: 2px solid rgba(255,255,255,0.3);
-          border-top-color: #fff;
-          border-radius: 50%;
-          animation: spin 0.6s linear infinite;
-        }
-
-        .slider-dots {
-          display: flex;
-          justify-content: center;
-          gap: 0.5rem;
-          margin-top: 2rem;
-          animation: fadeUp 0.7s ease 0.3s both;
-        }
-
-        .dot {
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background: rgba(255,255,255,0.3);
-          border: none;
-          cursor: pointer;
-          padding: 0;
-          transition: background 0.2s, width 0.25s;
-        }
-
-        .dot.active {
-          background: #fff;
-          width: 22px;
-          border-radius: 3px;
-        }
-
-        .slider-arrow {
-          position: absolute;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          background: rgba(255,255,255,0.12);
-          border: 1px solid rgba(255,255,255,0.2);
-          color: #fff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: background 0.2s;
-          backdrop-filter: blur(4px);
-          z-index: 10;
-        }
-
-        .slider-arrow:hover  { background: rgba(255,255,255,0.22); }
-        .slider-arrow:disabled { opacity: 0.2; cursor: default; }
-        .slider-arrow.prev { left: 1rem; }
-        .slider-arrow.next { right: 1rem; }
-
-        .skeleton-card {
-          flex-shrink: 0;
-          width: 400px;
-          min-height: 480px;
-          border-radius: 24px;
-          background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%);
-          border: 1px solid rgba(255,255,255,0.1);
-          overflow: hidden;
-          position: relative;
-        }
-
-        .skeleton-block {
-          border-radius: 6px;
-          background: linear-gradient(90deg,
-            rgba(255,255,255,0.06) 25%,
-            rgba(255,255,255,0.12) 50%,
-            rgba(255,255,255,0.06) 75%);
-          background-size: 200% 100%;
-          animation: shimmer 1.4s infinite;
-        }
-
-        .skeleton-inner {
-          position: absolute;
-          bottom: 2.75rem;
-          left: 2.5rem;
-          right: 2.5rem;
-        }
-
-        @keyframes fadeDown {
-          from { opacity: 0; transform: translateY(-16px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes fadeUp {
+        @keyframes hero-in {
           from { opacity: 0; transform: translateY(20px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-
-        @keyframes shimmer {
-          0%   { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
+        @keyframes modal-bg-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        @media (max-width: 480px) {
-          .game-card, .skeleton-card { width: 300px; min-height: 400px; }
-          .card-name { font-size: 1.9rem; }
-          .slider-track { padding: 0 calc(50% - 150px); }
-          .slider-arrow { display: none; }
+        @keyframes modal-in {
+          from { opacity: 0; transform: scale(.94) translateY(20px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes toast-in {
+          from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+          to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        @keyframes ff-pulse {
+          0%, 100% { filter: blur(4px) brightness(1); }
+          50%      { filter: blur(2px) brightness(1.4); }
         }
       `}</style>
 
-      {/* HUD fijo — se monta inmediatamente, independiente del slider */}
-      <PlayerHUD onClaimDaily={handleClaimDaily} onLogout={handleLogout} />
+      {/* PlayerHUD — fixed top-right */}
+      <PlayerHUD onLogout={handleLogout} />
 
-      <div className="lobby-root">
-        <header className="lobby-header">
-          <p className="lobby-eyebrow">Casino Nacional</p>
-          <h1 className="lobby-title">¿A qué jugamos hoy?</h1>
-          <p className="lobby-sub">Desliza y elige tu juego</p>
-        </header>
+      {/* Full-page wrapper */}
+      <div
+        style={{
+          width: "100vw",
+          minHeight: "100vh",
+          background: PALETTE.deep,
+          fontFamily: "Plus Jakarta Sans, system-ui, sans-serif",
+          color: PALETTE.cream,
+          position: "relative",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {/* Animated background */}
+        <LobbyBackdrop density="medium" />
+        <LobbyFireflies count={14} />
 
-        <div
-          className="slider-viewport"
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-        >
-          {!loading && (
-            <>
-              <button
-                className="slider-arrow prev"
-                onClick={() => goTo(active - 1)}
-                disabled={active === 0}
-                aria-label="Anterior"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              <button
-                className="slider-arrow next"
-                onClick={() => goTo(active + 1)}
-                disabled={active === floors.length - 1}
-                aria-label="Siguiente"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            </>
-          )}
-
-          <div
-            className="slider-track"
-            style={{ transform: `translateX(calc(-${active} * (400px + 1.25rem)))` }}
-            role="region"
-            aria-label="Juegos disponibles"
-          >
-            {loading ? (
-              [0, 1].map((i) => (
-                <div key={i} className="skeleton-card">
-                  <div className="skeleton-inner">
-                    <div className="skeleton-block" style={{ width: "40%", height: 10, marginBottom: "0.8rem" }} />
-                    <div className="skeleton-block" style={{ width: "70%", height: 28, marginBottom: "0.6rem" }} />
-                    <div className="skeleton-block" style={{ width: "90%", height: 10, marginBottom: "0.4rem" }} />
-                    <div className="skeleton-block" style={{ width: "60%", height: 10, marginBottom: "2rem" }} />
-                    <div className="skeleton-block" style={{ width: 120, height: 38, borderRadius: 100 }} />
-                  </div>
-                </div>
-              ))
-            ) : (
-              floors.map((floor, i) => (
-                <div
-                  key={floor.id}
-                  className={[
-                    "game-card",
-                    i === active ? "is-active" : "is-inactive",
-                    navigating === floor.id ? "navigating" : "",
-                  ].join(" ")}
-                  style={{ "--accent": floor.color } as React.CSSProperties}
-                  onClick={() => i === active && handleFloorClick(floor)}
-                  onKeyDown={(e) => e.key === "Enter" && i === active && handleFloorClick(floor)}
-                  role="button"
-                  tabIndex={i === active ? 0 : -1}
-                  aria-label={`Jugar ${floor.name}`}
-                  aria-disabled={!floor.available || i !== active}
-                >
-                  <div className="card-bg" />
-                  <div className="card-accent" />
-                  <div className="card-icon-wrap" aria-hidden="true">{floor.icon}</div>
-
-                  <div className="card-content">
-                    <p className="card-floor-label">Piso {floor.number}</p>
-                    <h2 className="card-name">{floor.name}</h2>
-                    <p className="card-desc">{floor.description}</p>
-
-                    <button
-                      className="card-cta"
-                      onClick={(e) => { e.stopPropagation(); handleFloorClick(floor); }}
-                      tabIndex={i === active ? 0 : -1}
-                      aria-label={`Entrar a ${floor.name}`}
-                    >
-                      {navigating === floor.id ? (
-                        <span className="cta-spinner" />
-                      ) : (
-                        <>
-                          Jugar ahora
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path d="M2.5 9.5L9.5 2.5M9.5 2.5H4M9.5 2.5V8"
-                              stroke="currentColor" strokeWidth="1.5"
-                              strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+        {/* Top bar — hidden on mobile since PlayerHUD covers it */}
+        <div style={{ display: "none" }}>
+          <TopBar
+            userName=""
+            onOpenProfile={() => {}}
+          />
         </div>
 
-        {!loading && (
-          <div className="slider-dots" role="tablist" aria-label="Navegación del slider">
-            {floors.map((floor, i) => (
-              <button
-                key={floor.id}
-                className={`dot${i === active ? " active" : ""}`}
-                onClick={() => goTo(i)}
-                role="tab"
-                aria-selected={i === active}
-                aria-label={`Ir a ${floor.name}`}
-              />
-            ))}
+        {/* Hero heading */}
+        <Hero />
+
+        {/* Three game cards */}
+        <main
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 56,
+            padding: "8px 56px 40px",
+            position: "relative",
+            zIndex: 3,
+            flexWrap: "wrap",
+          }}
+        >
+          <GameCard
+            id="parques"
+            idx="I"
+            title="Parqués"
+            kicker={COPY.parques.kicker}
+            copy={COPY.parques.copy}
+            players="312"
+            time={{ players: "2–4 jugadores", duration: "20–40 min" }}
+            art={<ParquesCardArt />}
+            onSelect={openMesa}
+            delay={0.15}
+          />
+
+          <GameCard
+            id="brisca"
+            idx="II"
+            title="Brisca"
+            kicker={COPY.brisca.kicker}
+            copy={COPY.brisca.copy}
+            players="184"
+            time={{ players: "2 ó 4", duration: "10–20 min" }}
+            art={<BriscaCardArt />}
+            onSelect={openMesa}
+            delay={0.3}
+          />
+
+          <MysteryCard delay={0.45} />
+        </main>
+
+        {/* Footer */}
+        <LobbyFooter />
+
+        {/* Setup modal */}
+        <MesaSetupModal
+          open={!!modalGame}
+          game={modalGame}
+          onClose={() => setModalGame(null)}
+        />
+
+        {/* Toast */}
+        {toast && (
+          <div
+            style={{
+              position: "fixed",
+              bottom: 32,
+              left: "50%",
+              transform: "translateX(-50%)",
+              background: PALETTE.cream,
+              color: PALETTE.deep,
+              padding: "14px 22px",
+              borderRadius: 999,
+              fontWeight: 700,
+              fontSize: 14,
+              zIndex: 1100,
+              boxShadow: "0 20px 40px rgba(0,0,0,.4)",
+              animation: "toast-in .3s ease-out",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: 999,
+                background: PALETTE.verde,
+                animation: "ff-pulse 1.2s ease-in-out infinite",
+              }}
+            />
+            {toast}
           </div>
         )}
       </div>
