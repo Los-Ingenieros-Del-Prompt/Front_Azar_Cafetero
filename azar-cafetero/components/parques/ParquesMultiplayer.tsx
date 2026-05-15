@@ -25,7 +25,7 @@ export const COLOR_EMOJI: Record<string, string> = {
   ROJO: "🔴", AMARILLO: "🟡", VERDE: "🟢", AZUL: "🔵",
 };
 
-// FIX Bug 1 & 2: La victoria está en relativePosition === 70, no 68
+// FIX Bug 1 & 2: La victoria está en relativePosition === 70
 const VICTORY_RELATIVE = 70;
 
 interface ParquesMultiplayerProps {
@@ -133,6 +133,17 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   const isHost = gameState?.players[0]?.id === playerId;
   const canRoll = isMyTurn && !gameState?.diceRolled && (gameState?.players.length ?? 0) >= 2 && !isAnimatingDice;
 
+  // ─── FIX: Detectar fin de partida correctamente ───────────────────────────
+  // Chequeamos múltiples señales del backend para mayor robustez
+  const isGameFinished = useMemo(() => {
+    if (!gameState) return false;
+    return (
+      gameState.finished === true ||
+      gameState.state === "FINISHED" ||
+      (gameState.winnerId != null && gameState.winnerId !== "")
+    );
+  }, [gameState]);
+
   const isWaiting = !gameState ||
     gameState.state === "WAITING_FOR_PLAYERS" ||
     (gameState.state === undefined && gameState.players.length < 2);
@@ -151,17 +162,16 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     }
   }, [gameState?.diceRolled, isAnimatingDice, isMyTurn, myPlayer, gameState?.die1Used, gameState?.die2Used, gameState?.jailExitAvailable, mixedStateChoice, gameId, playerId, exitJail]);
 
-  /**
-   * FIX Bug 1 & 2: canMove ahora usa VICTORY_RELATIVE=70 correctamente.
-   * Una ficha puede moverse si relativePosition + steps <= 70.
-   */
   const pieceCanMoveWithSteps = (piece: PieceDTO, steps: number): boolean => {
     if (piece.atHome || piece.inJail) return false;
     return piece.relativePosition + steps <= VICTORY_RELATIVE;
   };
 
+  // ─── FIX: hasAnyValidMove guarda contra fin de partida ───────────────────
   const hasAnyValidMove = useMemo(() => {
     if (!gameState?.diceRolled || !isMyTurn || !myPlayer) return false;
+    // Si el juego terminó, nunca hay movimientos válidos que mostrar
+    if (isGameFinished) return false;
 
     // Si hay fichas en cárcel y puede salir con par
     if (gameState.jailExitAvailable && mixedStateChoice !== 'move' && myPlayer.pieces.some(p => p.inJail)) {
@@ -173,16 +183,17 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
 
     return myPlayer.pieces.some((piece) => {
       if (piece.atHome || piece.inJail) return false;
-      // FIX: usar VICTORY_RELATIVE=70
       const canMoveD1 = d1Available && pieceCanMoveWithSteps(piece, gameState.die1);
       const canMoveD2 = d2Available && pieceCanMoveWithSteps(piece, gameState.die2);
       const canMoveSum = d1Available && d2Available && pieceCanMoveWithSteps(piece, gameState.die1 + gameState.die2);
       return canMoveD1 || canMoveD2 || canMoveSum;
     });
-  }, [gameState, isMyTurn, myPlayer, mixedStateChoice]);
+  }, [gameState, isMyTurn, myPlayer, mixedStateChoice, isGameFinished]);
 
   const movablePieces = useMemo<PieceDTO[]>(() => {
     if (!gameState?.diceRolled || !isMyTurn || !myPlayer || isAnimatingDice || mixedStateChoice === 'pending') return [];
+    // Si el juego terminó, no hay fichas movibles
+    if (isGameFinished) return [];
 
     const d1Available = !gameState.die1Used;
     const d2Available = !gameState.die2Used;
@@ -190,7 +201,6 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     return myPlayer.pieces.filter((piece) => {
       if (piece.atHome || piece.inJail) return false;
 
-      // FIX: usar pieceCanMoveWithSteps que usa VICTORY_RELATIVE=70
       const canMoveD1 = d1Available && pieceCanMoveWithSteps(piece, gameState.die1);
       const canMoveD2 = d2Available && pieceCanMoveWithSteps(piece, gameState.die2);
       const canMoveSum = d1Available && d2Available && pieceCanMoveWithSteps(piece, gameState.die1 + gameState.die2);
@@ -201,7 +211,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
 
       return canMoveD1 || canMoveD2 || canMoveSum;
     });
-  }, [gameState, isMyTurn, myPlayer, selectedDiceSelection, isAnimatingDice, mixedStateChoice]);
+  }, [gameState, isMyTurn, myPlayer, selectedDiceSelection, isAnimatingDice, mixedStateChoice, isGameFinished]);
 
   const handleRollDice = () => { if (canRoll) rollDice(gameId, playerId); };
 
@@ -213,11 +223,10 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
 
     let selection = selectedDiceSelection;
 
-    // Auto-seleccionar si solo hay un dado disponible
     if (!selection) {
       if (d1Available && !d2Available) selection = 1;
       else if (!d1Available && d2Available) selection = 2;
-      else return; // Hay dos dados disponibles, el usuario debe elegir primero
+      else return;
     }
 
     movePiece(gameId, playerId, pieceId, selection);
@@ -235,6 +244,12 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
 
   const handleStartGame = () => { if (isHost) startGame(gameId); };
 
+  const handleExit = () => {
+    leaveGame(gameId, playerId);
+    leaveTable(gameId, playerId, playerName);
+    router.push("/lobby");
+  };
+
   // ═══════════════════════════════════════════════════════════════════════════
   // PANTALLA: Conectando
   // ═══════════════════════════════════════════════════════════════════════════
@@ -242,10 +257,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     return (
       <div className="relative min-h-screen w-full text-white overflow-hidden" style={{ background: "#0a1f0a" }}>
         <ParquesBoard />
-        <GameControls
-          onMenu={() => { leaveGame(gameId, playerId); leaveTable(gameId, playerId, playerName); router.push("/lobby"); }}
-          onExit={() => { leaveGame(gameId, playerId); leaveTable(gameId, playerId, playerName); router.push("/lobby"); }}
-        />
+        <GameControls onMenu={handleExit} onExit={handleExit} />
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center p-10 rounded-2xl border border-emerald-500/40 bg-black/70 max-w-sm">
             <Loader2 className="w-12 h-12 animate-spin text-emerald-400 mx-auto mb-4" />
@@ -254,6 +266,165 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
             {error && <p className="text-red-400 mt-3 text-sm">{error}</p>}
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FIX: Pantalla de FIN DE PARTIDA — va ANTES del bloque isWaiting
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (isGameFinished && gameState) {
+    const winnerId = gameState.winnerId;
+    const winnerPlayer = gameState.players.find((p) => p.id === winnerId);
+    const ws = winnerPlayer ? COLOR_STYLES[winnerPlayer.color] : COLOR_STYLES.VERDE;
+    const isWinner = winnerId === playerId;
+
+    return (
+      <div className="relative min-h-screen w-full text-white overflow-hidden" style={{ background: "#0a1f0a" }}>
+        <ParquesBoard />
+
+        {/* Confetti-like overlay for winner */}
+        {isWinner && (
+          <div className="absolute inset-0 z-10 pointer-events-none">
+            {Array.from({ length: 20 }).map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-3 h-3 rounded-full opacity-70"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 60}%`,
+                  background: ["#facc15", "#f87171", "#34d399", "#60a5fa"][i % 4],
+                  animation: `fall ${2 + Math.random() * 3}s linear ${Math.random() * 2}s infinite`,
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        <div className="relative z-20 min-h-screen flex items-center justify-center p-4">
+          <div
+            className="text-center p-8 md:p-12 rounded-[2.5rem] border-2 bg-black/90 backdrop-blur-xl max-w-xl w-full shadow-2xl"
+            style={{
+              borderColor: winnerPlayer ? COLOR_STYLES[winnerPlayer.color].hex : "#10b981",
+              boxShadow: `0 0 60px ${winnerPlayer ? COLOR_STYLES[winnerPlayer.color].hex : "#10b981"}44`,
+            }}
+          >
+            {/* Trophy */}
+            <div
+              className="text-8xl mb-4 inline-block"
+              style={{ filter: "drop-shadow(0 0 20px rgba(250,204,21,0.6))" }}
+            >
+              🏆
+            </div>
+
+            {/* Title */}
+            <p className="text-xs uppercase tracking-[0.3em] text-emerald-500/60 font-semibold mb-2">
+              ¡Partida terminada!
+            </p>
+
+            {isWinner ? (
+              <h2 className="text-5xl font-black tracking-tight mb-2 text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500">
+                ¡GANASTE!
+              </h2>
+            ) : (
+              <h2 className="text-4xl font-black tracking-tight mb-2 text-white/80">
+                Fin del juego
+              </h2>
+            )}
+
+            {/* Winner info */}
+            {winnerPlayer && (
+              <div
+                className={`inline-flex items-center gap-3 px-6 py-3 rounded-2xl border-2 mt-4 mb-6 ${ws.bg} ${ws.border}`}
+              >
+                <span className="text-2xl">{COLOR_EMOJI[winnerPlayer.color]}</span>
+                <div className="text-left">
+                  <p className={`font-black text-lg ${ws.text}`}>
+                    {winnerPlayer.name}
+                    {winnerPlayer.id === playerId && " (Tú)"}
+                  </p>
+                  <p className="text-white/40 text-xs">
+                    {winnerPlayer.pieces.filter((p) => p.atHome).length}/4 fichas en meta
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Scoreboard */}
+            <div className="flex flex-col gap-2 mb-8 mt-4">
+              {[...gameState.players]
+                .sort((a, b) => b.pieces.filter((p) => p.atHome).length - a.pieces.filter((p) => p.atHome).length)
+                .map((p, rank) => {
+                  const s = COLOR_STYLES[p.color] ?? COLOR_STYLES.VERDE;
+                  const isThisWinner = p.id === winnerId;
+                  const piecesHome = p.pieces.filter((pc) => pc.atHome).length;
+                  return (
+                    <div
+                      key={p.id}
+                      className={`flex items-center justify-between px-5 py-3 rounded-2xl border transition-all ${
+                        isThisWinner
+                          ? `${s.border} ${s.bg} border-2`
+                          : "border-white/10 bg-white/5"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black ${
+                            rank === 0 ? "bg-yellow-400 text-black" : "bg-white/10 text-white/50"
+                          }`}
+                        >
+                          {rank + 1}
+                        </span>
+                        <span className={`font-bold text-sm ${isThisWinner ? s.text : "text-white/70"}`}>
+                          {COLOR_EMOJI[p.color]} {p.name}
+                          {p.id === playerId && " (Tú)"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          {Array.from({ length: 4 }).map((_, i) => (
+                            <div
+                              key={i}
+                              className={`w-3 h-3 rounded-full border ${
+                                i < piecesHome
+                                  ? `${s.bg.replace("/20", "")} border-current`
+                                  : "border-white/20 bg-transparent"
+                              }`}
+                              style={i < piecesHome ? { backgroundColor: s.hex, borderColor: s.hex } : {}}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-white/40 text-xs ml-1">{piecesHome}/4</span>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => router.push("/parques")}
+                className="flex-1 py-4 rounded-2xl border-2 border-emerald-500/50 bg-emerald-500/15 text-emerald-400 font-bold text-sm uppercase tracking-widest transition hover:bg-emerald-500/25 hover:border-emerald-400 active:scale-95"
+              >
+                🎲 Nueva partida
+              </button>
+              <button
+                onClick={() => router.push("/lobby")}
+                className="flex-1 py-4 rounded-2xl border border-white/15 bg-white/5 text-white/60 font-bold text-sm uppercase tracking-widest transition hover:bg-white/10 active:scale-95"
+              >
+                🏠 Lobby
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <style>{`
+          @keyframes fall {
+            0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+          }
+        `}</style>
       </div>
     );
   }
@@ -268,10 +439,7 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     return (
       <div className="relative min-h-screen w-full text-white overflow-hidden" style={{ background: "#0a1f0a" }}>
         <ParquesBoard />
-        <GameControls
-          onMenu={() => { leaveGame(gameId, playerId); leaveTable(gameId, playerId, playerName); router.push("/lobby"); }}
-          onExit={() => { leaveGame(gameId, playerId); leaveTable(gameId, playerId, playerName); router.push("/lobby"); }}
-        />
+        <GameControls onMenu={handleExit} onExit={handleExit} />
 
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 z-0" />
 
@@ -373,83 +541,11 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // PANTALLA: Fin de partida
-  // ═══════════════════════════════════════════════════════════════════════════
-  if (gameState.finished) {
-  const winnerPlayer = gameState.players.find((p) => p.id === gameState.winnerId);
-  const ws = winnerPlayer ? COLOR_STYLES[winnerPlayer.color] : COLOR_STYLES.VERDE;
-
-  return (
-    <div className="relative min-h-screen w-full text-white overflow-hidden" style={{ background: "#0a1f0a" }}>
-      <ParquesBoard />
-      <div className="relative z-10 min-h-screen flex items-center justify-center">
-        <div className="text-center p-10 rounded-[2rem] border-2 border-emerald-500/40 bg-black/85 max-w-md w-full mx-4 shadow-[0_0_50px_rgba(16,185,129,0.15)]">
-
-          <div className="text-6xl mb-2">🏆</div>
-          <p className="text-xs uppercase tracking-[0.3em] text-emerald-500/50 font-semibold mb-1">
-            ¡Partida terminada!
-          </p>
-
-          {winnerPlayer && (
-            <>
-              <h2 className={`text-4xl font-black tracking-tight mb-1 ${ws.text}`}>
-                {winnerPlayer.name}
-              </h2>
-              <p className="text-sm text-white/50 mb-8">
-                {COLOR_EMOJI[winnerPlayer.color]} Ficha {winnerPlayer.color.charAt(0) + winnerPlayer.color.slice(1).toLowerCase()}
-                {" · "}
-                {winnerPlayer.pieces.filter((p) => p.atHome).length}/4 fichas en meta
-              </p>
-            </>
-          )}
-
-          <div className="flex flex-col gap-2 mb-8">
-            {[...gameState.players]
-              .sort((a, b) => b.pieces.filter((p) => p.atHome).length - a.pieces.filter((p) => p.atHome).length)
-              .map((p) => {
-                const s = COLOR_STYLES[p.color];
-                const isWinner = p.id === gameState.winnerId;
-                return (
-                  <div
-                    key={p.id}
-                    className={`flex justify-between items-center px-4 py-3 rounded-xl border ${
-                      isWinner ? `${s.border} ${s.bg} border-2` : "border-white/10 bg-white/5"
-                    }`}
-                  >
-                    <span className={`font-bold text-sm ${isWinner ? s.text : "text-white/70"}`}>
-                      {COLOR_EMOJI[p.color]} {p.name}
-                      {p.id === playerId && " (Tú)"}
-                    </span>
-                    <span className="text-white/50 text-sm">
-                      {p.pieces.filter((pc) => pc.atHome).length}/4 🏠
-                    </span>
-                  </div>
-                );
-              })}
-          </div>
-
-          <button
-            onClick={() => router.push("/parques")}
-            className="w-full py-4 rounded-2xl border-2 border-emerald-500/50 bg-emerald-500/15 text-emerald-400 font-bold text-sm uppercase tracking-widest transition hover:bg-emerald-500/25 hover:border-emerald-400 active:scale-95"
-          >
-            Volver al Piso de Parqués
-          </button>
-
-        </div>
-      </div>
-    </div>
-  );
-}
-
-  // ═══════════════════════════════════════════════════════════════════════════
   // PANTALLA: Juego en curso
   // ═══════════════════════════════════════════════════════════════════════════
   return (
     <div className="relative w-full text-white overflow-hidden" style={{ height: "100vh", display: "flex", flexDirection: "column", userSelect: "none", background: "#0a1f0a" }}>
-      <GameControls
-        onMenu={() => { leaveGame(gameId, playerId); leaveTable(gameId, playerId, playerName); router.push("/lobby"); }}
-        onExit={() => { leaveGame(gameId, playerId); leaveTable(gameId, playerId, playerName); router.push("/lobby"); }}
-      />
+      <GameControls onMenu={handleExit} onExit={handleExit} />
 
       <div className="relative z-10 flex flex-col h-full overflow-hidden">
 
@@ -539,7 +635,6 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
               <div className="flex flex-col gap-2">
                 {movablePieces.map((piece) => {
                   const s = COLOR_STYLES[myPlayer?.color ?? "VERDE"];
-                  // FIX: calcular cuántos pasos faltan para la meta
                   const stepsToVictory = VICTORY_RELATIVE - piece.relativePosition;
                   return (
                     <button
@@ -590,8 +685,8 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
             </div>
           )}
 
-          {/* FIX Bug 2: Solo mostrar "No hay movimientos" cuando realmente no hay */}
-          {gameState.diceRolled && isMyTurn && !hasAnyValidMove && !isAnimatingDice && mixedStateChoice !== 'pending' && (
+          {/* FIX: Solo mostrar "No hay movimientos" cuando realmente no hay Y el juego sigue activo */}
+          {gameState.diceRolled && isMyTurn && !hasAnyValidMove && !isAnimatingDice && mixedStateChoice !== 'pending' && !isGameFinished && (
             <div className="absolute bottom-60 right-8 z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
               <button
                 onClick={() => passTurn(gameId, playerId)}
