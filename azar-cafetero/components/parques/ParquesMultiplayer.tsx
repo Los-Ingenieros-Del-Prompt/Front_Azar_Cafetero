@@ -376,49 +376,70 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
   // PANTALLA: Fin de partida
   // ═══════════════════════════════════════════════════════════════════════════
   if (gameState.finished) {
-    const winnerPlayer = gameState.players.find((p) => p.id === gameState.winnerId);
-    const ws = winnerPlayer ? COLOR_STYLES[winnerPlayer.color] : COLOR_STYLES.VERDE;
-    return (
-      <div className="relative min-h-screen w-full text-white overflow-hidden" style={{ background: "#0a1f0a" }}>
-        <ParquesBoard />
-        <GameControls
-          onMenu={() => { leaveGame(gameId, playerId); leaveTable(gameId, playerId, playerName); router.push("/lobby"); }}
-          onExit={() => { leaveGame(gameId, playerId); leaveTable(gameId, playerId, playerName); router.push("/lobby"); }}
-        />
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <div className="text-center p-10 rounded-2xl border-2 border-emerald-500/50 bg-black/90 max-w-md w-full mx-4">
-            <div className="text-6xl mb-4">🏆</div>
-            <h2 className="text-2xl font-bold text-emerald-400 mb-4 uppercase tracking-widest">¡Partida Terminada!</h2>
-            {winnerPlayer && (
-              <p className={`text-xl mb-6 ${ws.text}`}>
-                {COLOR_EMOJI[winnerPlayer.color]} <strong>{winnerPlayer.name}</strong>
-                {winnerPlayer.id === playerId && " (Tú)"} gana
+  const winnerPlayer = gameState.players.find((p) => p.id === gameState.winnerId);
+  const ws = winnerPlayer ? COLOR_STYLES[winnerPlayer.color] : COLOR_STYLES.VERDE;
+
+  return (
+    <div className="relative min-h-screen w-full text-white overflow-hidden" style={{ background: "#0a1f0a" }}>
+      <ParquesBoard />
+      <div className="relative z-10 min-h-screen flex items-center justify-center">
+        <div className="text-center p-10 rounded-[2rem] border-2 border-emerald-500/40 bg-black/85 max-w-md w-full mx-4 shadow-[0_0_50px_rgba(16,185,129,0.15)]">
+
+          <div className="text-6xl mb-2">🏆</div>
+          <p className="text-xs uppercase tracking-[0.3em] text-emerald-500/50 font-semibold mb-1">
+            ¡Partida terminada!
+          </p>
+
+          {winnerPlayer && (
+            <>
+              <h2 className={`text-4xl font-black tracking-tight mb-1 ${ws.text}`}>
+                {winnerPlayer.name}
+              </h2>
+              <p className="text-sm text-white/50 mb-8">
+                {COLOR_EMOJI[winnerPlayer.color]} Ficha {winnerPlayer.color.charAt(0) + winnerPlayer.color.slice(1).toLowerCase()}
+                {" · "}
+                {winnerPlayer.pieces.filter((p) => p.atHome).length}/4 fichas en meta
               </p>
-            )}
-            <div className="flex flex-col gap-2 mb-6">
-              {[...gameState.players]
-                .sort((a, b) => b.pieces.filter((p) => p.atHome).length - a.pieces.filter((p) => p.atHome).length)
-                .map((p) => {
-                  const s = COLOR_STYLES[p.color];
-                  return (
-                    <div key={p.id} className={`flex justify-between items-center px-4 py-2 rounded-lg border ${s.border} ${s.bg}`}>
-                      <span className={`font-bold text-sm ${s.text}`}>
-                        {COLOR_EMOJI[p.color]} {p.name}{p.id === playerId && " (Tú)"}
-                      </span>
-                      <span className="text-white/60 text-sm">{p.pieces.filter((pc) => pc.atHome).length}/4 🏠</span>
-                    </div>
-                  );
-                })}
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => window.location.reload()} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition">Revancha</button>
-              <button onClick={() => router.push("/parques")} className="flex-1 bg-white/10 hover:bg-white/20 text-white font-medium py-3 rounded-xl transition">Salir</button>
-            </div>
+            </>
+          )}
+
+          <div className="flex flex-col gap-2 mb-8">
+            {[...gameState.players]
+              .sort((a, b) => b.pieces.filter((p) => p.atHome).length - a.pieces.filter((p) => p.atHome).length)
+              .map((p) => {
+                const s = COLOR_STYLES[p.color];
+                const isWinner = p.id === gameState.winnerId;
+                return (
+                  <div
+                    key={p.id}
+                    className={`flex justify-between items-center px-4 py-3 rounded-xl border ${
+                      isWinner ? `${s.border} ${s.bg} border-2` : "border-white/10 bg-white/5"
+                    }`}
+                  >
+                    <span className={`font-bold text-sm ${isWinner ? s.text : "text-white/70"}`}>
+                      {COLOR_EMOJI[p.color]} {p.name}
+                      {p.id === playerId && " (Tú)"}
+                    </span>
+                    <span className="text-white/50 text-sm">
+                      {p.pieces.filter((pc) => pc.atHome).length}/4 🏠
+                    </span>
+                  </div>
+                );
+              })}
           </div>
+
+          <button
+            onClick={() => router.push("/parques")}
+            className="w-full py-4 rounded-2xl border-2 border-emerald-500/50 bg-emerald-500/15 text-emerald-400 font-bold text-sm uppercase tracking-widest transition hover:bg-emerald-500/25 hover:border-emerald-400 active:scale-95"
+          >
+            Volver al Piso de Parqués
+          </button>
+
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PANTALLA: Juego en curso
