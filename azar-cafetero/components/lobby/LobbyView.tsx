@@ -48,11 +48,12 @@ const COPY = {
 
 
 
-function TopBar({ userName, userAvatar, balance, onOpenProfile }: {
+function TopBar({ userName, userAvatar, balance, onOpenProfile, onLogout }: {
   userName: string;
   userAvatar?: string;
   balance?: number | null;
   onOpenProfile?: () => void;
+  onLogout?: () => void;
 }) {
   return (
     <header
@@ -122,42 +123,103 @@ function TopBar({ userName, userAvatar, balance, onOpenProfile }: {
           </span>
         )}
 
-        {/* avatar */}
-        <button
-          onClick={onOpenProfile}
-          style={{
-            all: "unset",
-            cursor: "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            color: PALETTE.creamSoft,
-            fontWeight: 600,
-          }}
-        >
-          <span
+        {/* avatar & logout */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button
+            onClick={onOpenProfile}
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: 999,
-              background: `linear-gradient(135deg, ${PALETTE.amarillo}, ${PALETTE.rojo})`,
-              border: `2px solid ${PALETTE.deep}`,
+              all: "unset",
+              cursor: "pointer",
               display: "inline-flex",
               alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 800,
-              fontSize: 12,
-              color: "#fff",
-              overflow: "hidden",
+              gap: 10,
+              padding: "4px 12px 4px 4px",
+              borderRadius: 999,
+              background: "rgba(255,255,255,.05)",
+              border: `1px solid ${PALETTE.creamSoft}1a`,
+              color: PALETTE.creamSoft,
+              fontWeight: 600,
+              transition: "background .2s, transform .2s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(255,255,255,.1)";
+              e.currentTarget.style.transform = "translateY(-1px)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(255,255,255,.05)";
+              e.currentTarget.style.transform = "";
             }}
           >
-            {userAvatar?.startsWith("http") ? (
-              <img src={userAvatar} alt={userName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : (
-              userName.charAt(0).toUpperCase()
-            )}
-          </span>
-        </button>
+            <span
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 999,
+                background: `linear-gradient(135deg, ${PALETTE.amarillo}, ${PALETTE.rojo})`,
+                border: `2px solid ${PALETTE.deep}`,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 800,
+                fontSize: 12,
+                color: "#fff",
+                overflow: "hidden",
+                flexShrink: 0,
+              }}
+            >
+              {userAvatar?.startsWith("http") ? (
+                <img src={userAvatar} alt={userName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                userName.charAt(0).toUpperCase()
+              )}
+            </span>
+            <span style={{ fontSize: 13 }}>{userName}</span>
+          </button>
+
+          <div style={{ width: 1, height: 20, background: PALETTE.creamSoft, opacity: 0.1, margin: "0 4px" }} />
+
+          <button
+            onClick={onLogout}
+            style={{
+              all: "unset",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 16px",
+              borderRadius: 999,
+              background: "rgba(206,17,38,.08)",
+              border: `1px solid rgba(206,17,38,.2)`,
+              color: "#ff6b6b",
+              fontWeight: 700,
+              fontSize: 12,
+              letterSpacing: ".02em",
+              textTransform: "uppercase",
+              transition: "all .2s cubic-bezier(.2,.7,.3,1)",
+              position: "relative",
+              overflow: "hidden",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(206,17,38,.15)";
+              e.currentTarget.style.border = `1px solid rgba(206,17,38,.4)`;
+              e.currentTarget.style.transform = "translateY(-1px)";
+              e.currentTarget.style.boxShadow = "0 4px 15px rgba(206,17,38,.2)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(206,17,38,.08)";
+              e.currentTarget.style.border = `1px solid rgba(206,17,38,.2)`;
+              e.currentTarget.style.transform = "";
+              e.currentTarget.style.boxShadow = "none";
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Salir
+          </button>
+        </div>
       </div>
     </header>
   );
@@ -237,8 +299,8 @@ function Hero() {
 
 export default function LobbyView() {
   const router = useRouter();
-  const { logout } = useUserContext();
-
+  const { user, logout } = useUserContext();
+  const [panelOpen, setPanelOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const openMesa = (id: string) => {
@@ -291,8 +353,15 @@ export default function LobbyView() {
         }
       `}</style>
 
-      {/* PlayerHUD — fixed top-right */}
+      {/* PlayerHUD — fixed top-right (avatar only) */}
       <PlayerHUD onLogout={handleLogout} />
+
+      {/* Profile Panel */}
+      <ProfilePanel
+        open={panelOpen}
+        onClose={() => setPanelOpen(false)}
+        onLogout={handleLogout}
+      />
 
       {/* Full-page wrapper */}
       <div
@@ -312,13 +381,14 @@ export default function LobbyView() {
         <LobbyBackdrop density="medium" />
         <LobbyFireflies count={14} />
 
-        {/* Top bar — hidden on mobile since PlayerHUD covers it */}
-        <div style={{ display: "none" }}>
-          <TopBar
-            userName=""
-            onOpenProfile={() => { }}
-          />
-        </div>
+        {/* Top bar */}
+        <TopBar
+          userName={user?.name || "Invitado"}
+          userAvatar={user?.avatarUrl}
+          balance={0} // Balance is handled by PlayerHUD, but we show a placeholder or fetch it
+          onOpenProfile={() => setPanelOpen(true)}
+          onLogout={handleLogout}
+        />
 
         {/* Hero heading */}
         <Hero />
