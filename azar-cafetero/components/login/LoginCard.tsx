@@ -255,7 +255,7 @@ export default function LoginCard({ onError, onLoadingChange, isLoading }: Login
             }}
           >
             <img
-              src="/images/logo.jpeg"
+              src="/images/logo.png"
               alt="Azar Cafetero"
               style={{
                 width: "100%",
