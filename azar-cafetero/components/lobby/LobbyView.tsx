@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUserContext } from "@/context/UserContext";
+import { useBalance } from "@/hooks/useBalance";
 import ProfilePanel from "@/components/profile/ProfilePanel";
 import PlayerHUD from "@/components/lobby/PlayerHUD";
 import LobbyBackdrop from "@/components/lobby/LobbyBackdrop";
@@ -301,6 +302,7 @@ function Hero() {
 export default function LobbyView() {
   const router = useRouter();
   const { user, logout } = useUserContext();
+  const { amount } = useBalance();
   const [panelOpen, setPanelOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -362,6 +364,7 @@ export default function LobbyView() {
         open={panelOpen}
         onClose={() => setPanelOpen(false)}
         onLogout={handleLogout}
+        balance={amount}
       />
 
       {/* Full-page wrapper */}

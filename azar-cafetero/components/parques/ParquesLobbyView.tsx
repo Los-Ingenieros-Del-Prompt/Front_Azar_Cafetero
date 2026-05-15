@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUserContext } from "@/context/UserContext";
+import { useBalance } from "@/hooks/useBalance";
 import { useGameWebSocket, TableDTO } from "@/hooks/useGameWebSocket";
 import ProfilePanel from "@/components/profile/ProfilePanel";
 import LobbyBackdrop from "@/components/lobby/LobbyBackdrop";
@@ -30,6 +31,7 @@ const MAX_PLAYERS = 4;
 export default function ParquesLobbyView() {
   const router = useRouter();
   const { user, logout } = useUserContext();
+  const { amount } = useBalance();
   const {
     isConnected,
     tables,
@@ -172,6 +174,20 @@ export default function ParquesLobbyView() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '7px 14px', borderRadius: 999,
+              background: 'rgba(255,255,255,.04)',
+              border: `1px solid ${PALETTE.creamSoft}22`,
+              color: PALETTE.cream, fontWeight: 700, fontSize: 13,
+            }}>
+              <svg width="14" height="14" viewBox="0 0 16 16">
+                <ellipse cx="8" cy="8" rx="4.5" ry="6.5" fill={PALETTE.amarillo} transform="rotate(-20 8 8)" />
+                <path d="M 8 1.5 Q 5 8 8 14.5" stroke="rgba(0,0,0,.45)" strokeWidth="1" fill="none" transform="rotate(-20 8 8)" />
+              </svg>
+              {amount !== null ? amount.toLocaleString("es-CO") : "—"}
+              <span style={{ opacity: .55, fontWeight: 500, fontSize: 11 }}>granos</span>
+            </span>
             <ConnectionChip palette={PALETTE} isConnected={isConnected} />
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 13, color: PALETTE.creamSoft,
@@ -358,6 +374,7 @@ export default function ParquesLobbyView() {
         open={panelOpen}
         onClose={() => setPanelOpen(false)}
         onLogout={() => { setPanelOpen(false); handleAction('exit'); }}
+        balance={amount}
       />
 
       <CreateTableModal
