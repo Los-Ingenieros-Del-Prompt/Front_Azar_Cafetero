@@ -18,42 +18,7 @@ const PALETTE = {
   cafe: "#6B4423",
 };
 
-interface FeatureProps {
-  icon: string;
-  label: string;
-  sub: string;
-}
 
-function Feature({ icon, label, sub }: FeatureProps) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-      <div
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 12,
-          background: "rgba(255,255,255,.05)",
-          border: `1px solid ${PALETTE.creamSoft}1a`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 22,
-          flexShrink: 0,
-        }}
-      >
-        {icon}
-      </div>
-      <div>
-        <div style={{ fontWeight: 700, fontSize: 14, color: PALETTE.cream }}>
-          {label}
-        </div>
-        <div style={{ fontSize: 12, color: PALETTE.creamSoft, opacity: 0.65 }}>
-          {sub}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function LoginView() {
   const [error, setError] = React.useState<string | null>(null);
@@ -164,7 +129,7 @@ export default function LoginView() {
         {/* Left: Login Card */}
         <div style={{ display: "flex", justifyContent: "flex-end", flexDirection: "column", alignItems: "center", gap: 16 }}>
           <LoginCard onError={setError} onLoadingChange={setIsLoading} isLoading={isLoading} />
-          
+
           {/* Error Message */}
           {error && (
             <div style={{
@@ -253,23 +218,11 @@ export default function LoginView() {
             Parqués, brisca y todos los clásicos colombianos en una sola mesa.
             <strong style={{ color: PALETTE.cream }}>
               {" "}
-              Conectate, jugá con los panas, y que la suerte te acompañe.
+              Entra, apueste con los panas y suerte.
             </strong>
           </p>
 
-          {/* Feature row */}
-          <div
-            style={{
-              display: "flex",
-              gap: 36,
-              marginTop: 36,
-              animation: "hero-in .8s .3s ease-out backwards",
-            }}
-          >
-            <Feature icon="🃏" label="2 juegos clásicos" sub="Parqués · Brisca" />
-            <Feature icon="☕" label="Granos de café" sub="moneda de la casa" />
-            <Feature icon="🌴" label="Mesa abierta" sub="24 / 7, donde estés" />
-          </div>
+
         </div>
       </main>
 
@@ -290,24 +243,7 @@ export default function LoginView() {
         <span style={{ opacity: 0.55 }}>
           © 2026 Azar Cafetero · Hecho con tinto en Colombia
         </span>
-        <span
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 18,
-            opacity: 0.65,
-          }}
-        >
-          <a style={{ color: "inherit", textDecoration: "none", cursor: "pointer" }}>
-            Sobre nosotros
-          </a>
-          <a style={{ color: "inherit", textDecoration: "none", cursor: "pointer" }}>
-            Soporte
-          </a>
-          <a style={{ color: "inherit", textDecoration: "none", cursor: "pointer" }}>
-            Privacidad
-          </a>
-        </span>
+
       </footer>
 
       {/* Signing-in overlay */}
