@@ -74,7 +74,7 @@ export default function LoginView() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <img
-            src="/images/logo.jpeg"
+            src="/images/logo.png"
             alt="Logo"
             style={{ width: 44, height: 38, objectFit: "contain", opacity: 0.9 }}
           />

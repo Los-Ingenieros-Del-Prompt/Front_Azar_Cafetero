@@ -70,7 +70,7 @@ function TopBar({ userName, userAvatar, balance, onOpenProfile }: {
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         <div style={{ width: 52, height: 44, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <img
-            src="/images/logo.jpeg"
+            src="/images/logo.png"
             alt="Azar Cafetero"
             style={{ width: 52, height: 44, objectFit: "contain" }}
             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
