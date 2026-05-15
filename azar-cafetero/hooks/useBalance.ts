@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useRef, useCallback } from "react";
+import { getToken } from "@/lib/auth";
 import {
   getBalance,
   claimDailyBonus,
@@ -64,9 +65,12 @@ export function useBalance(): UseBalanceReturn {
   useEffect(() => {
     if (loading) return;
 
-    const es = new EventSource(`${GATEWAY}/api/player/balance/live`, {
-      withCredentials: true,
-    });
+    const token = getToken();
+    const sseUrl = token
+      ? `${GATEWAY}/api/player/balance/live?token=${encodeURIComponent(token)}`
+      : `${GATEWAY}/api/player/balance/live`;
+
+    const es = new EventSource(sseUrl);
 
     es.addEventListener("balance-update", (e: MessageEvent) => {
       try {

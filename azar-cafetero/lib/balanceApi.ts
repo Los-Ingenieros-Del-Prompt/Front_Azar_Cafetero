@@ -1,4 +1,11 @@
+import { getToken } from "@/lib/auth";
+
 const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+
+function authHeaders(): HeadersInit {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 export interface BalanceData {
   userId: string;
@@ -15,7 +22,7 @@ export interface BalanceSseEvent {
 
 export async function getBalance(): Promise<BalanceData> {
   const res = await fetch(`${GATEWAY}/api/player/balance`, {
-    credentials: "include",
+    headers: authHeaders(),
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`balance: ${res.status}`);
@@ -29,7 +36,7 @@ export async function claimDailyBonus(): Promise<{
 }> {
   const res = await fetch(`${GATEWAY}/player/bonus`, {
     method: "POST",
-    credentials: "include",
+    headers: authHeaders(),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "Error al reclamar bono");
