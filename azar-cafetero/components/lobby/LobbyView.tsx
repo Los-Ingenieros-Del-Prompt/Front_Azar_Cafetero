@@ -23,13 +23,13 @@ const PALETTE = {
 };
 
 const COPY = {
-  eyebrow: "Escogé tu mesa, parcero",
+  eyebrow: "Escoja su mesa, parcero",
   title: "La noche está",
   titleAccent: "pa\u2019 jugar",
   sub: (
     <>
       Dos clásicos colombianos. Una baraja, un tablero, los panas conectados y un tinto
-      caliente. <strong>Vos pedís la mesa.</strong>
+      caliente. <strong>Usted pide la mesa.</strong>
     </>
   ),
   parques: {
@@ -316,7 +316,7 @@ export default function LobbyView() {
         <div style={{ display: "none" }}>
           <TopBar
             userName=""
-            onOpenProfile={() => {}}
+            onOpenProfile={() => { }}
           />
         </div>
 
@@ -343,7 +343,6 @@ export default function LobbyView() {
             title="Parqués"
             kicker={COPY.parques.kicker}
             copy={COPY.parques.copy}
-            players="312"
             time={{ players: "2–4 jugadores", duration: "20–40 min" }}
             art={<ParquesCardArt />}
             onSelect={openMesa}
@@ -356,7 +355,6 @@ export default function LobbyView() {
             title="Brisca"
             kicker={COPY.brisca.kicker}
             copy={COPY.brisca.copy}
-            players="184"
             time={{ players: "2 ó 4", duration: "10–20 min" }}
             art={<BriscaCardArt />}
             onSelect={openMesa}

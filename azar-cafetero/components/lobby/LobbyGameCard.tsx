@@ -39,7 +39,6 @@ export interface GameCardProps {
   title: string;
   kicker: string;
   copy: string;
-  players: string;
   time: { players: string; duration: string };
   art: React.ReactNode;
   onSelect: (id: string) => void;
@@ -52,7 +51,6 @@ export default function GameCard({
   title,
   kicker,
   copy,
-  players,
   time,
   art,
   onSelect,
@@ -188,39 +186,7 @@ export default function GameCard({
           {idx}
         </div>
 
-        {/* live dot */}
-        <div
-          style={{
-            position: "absolute",
-            top: 16,
-            right: 16,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "4px 10px",
-            background: "rgba(14,22,16,.7)",
-            color: PALETTE.cream,
-            borderRadius: 999,
-            fontSize: 10,
-            fontWeight: 700,
-            letterSpacing: ".1em",
-            textTransform: "uppercase",
-            transform: "translateZ(40px)",
-            backdropFilter: "blur(4px)",
-          }}
-        >
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: 999,
-              background: PALETTE.verde,
-              boxShadow: `0 0 8px ${PALETTE.verde}`,
-              animation: "ff-pulse 1.5s ease-in-out infinite",
-            }}
-          />
-          {players} mesas
-        </div>
+
       </button>
 
       {/* Caption below card */}
