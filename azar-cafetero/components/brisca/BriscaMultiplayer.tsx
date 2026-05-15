@@ -705,20 +705,42 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
     const winnerPlayer=players.find(p=>p.id===winner?.id);
     const sortedPlayers=[...players].sort((a,b)=>b.score-a.score);
     const totalPoints=sortedPlayers.reduce((sum,p)=>sum+p.score,0);
+    const topScore = sortedPlayers[0]?.score ?? 0;
+    const isTied = sortedPlayers.filter(p => p.score === topScore).length > 1;
+
+    if (isTied) {
+      return (
+        <div style={{ position:"relative",minHeight:"100vh",width:"100%",color:"white",overflow:"hidden",background:"#001800" }}>
+          <PokerTable/>
+          <div style={{ position:"relative",zIndex:10,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Georgia,serif" }}>
+            <div style={{ textAlign:"center",padding:"44px 52px",borderRadius:22,background:`linear-gradient(160deg, rgba(0,48,135,0.97), rgba(0,18,50,0.97))`,border:`3px solid ${COL.caribe}`,boxShadow:`0 0 80px rgba(0,175,236,0.25)`,maxWidth:500 }}>
+              <FlagStripe h={8}/>
+              <div style={{ fontSize:52,margin:"16px 0 12px" }}>🤝</div>
+              <h2 style={{ fontSize:28,fontWeight:900,color:COL.amarillo,marginBottom:8,letterSpacing:3,textTransform:"uppercase" }}>¡Empate!</h2>
+              <p style={{ color:COL.caribe,fontSize:14,marginBottom:24 }}>Empataron con <strong style={{ color:COL.amarillo }}>{topScore} puntos</strong></p>
+              <div style={{ display:"flex",flexDirection:"column",gap:8,marginBottom:24 }}>
+                {sortedPlayers.map((p)=>(
+                  <div key={p.id} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 16px",borderRadius:10,background:p.score===topScore?`rgba(0,175,236,0.15)`:"rgba(255,255,255,0.04)",border:`2px solid ${p.score===topScore?COL.caribe:"rgba(255,255,255,0.1)"}` }}>
+                    <span style={{ color:p.clr,fontWeight:"bold",fontSize:14 }}>{p.emoji} {p.name}{p.isMe&&" (Tú)"}</span>
+                    <span style={{ color:COL.amarillo,fontSize:20,fontWeight:900 }}>{p.score}</span>
+                  </div>
+                ))}
+              </div>
+              <p style={{ color:"rgba(255,248,231,0.4)",fontSize:12,marginBottom:20 }}>de {totalPoints} puntos en juego</p>
+              <button onClick={()=>window.location.reload()} style={{ background:`linear-gradient(135deg, ${COL.amarillo}, ${COL.oro})`,color:"#1a0000",fontWeight:"bold",fontSize:15,padding:"13px 36px",borderRadius:12,border:`2px solid ${COL.rojo}`,cursor:"pointer",fontFamily:"Georgia,serif",letterSpacing:3,textTransform:"uppercase",boxShadow:`0 0 28px rgba(255,209,0,0.45)` }}>Nueva Partida</button>
+              <div style={{ marginTop:16 }}><FlagStripe h={6}/></div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div style={{ position:"relative",minHeight:"100vh",width:"100%",color:"white",overflow:"hidden",background:"#001800" }}>
         <PokerTable/>
         <GameControls 
-          onMenu={() => {
-            leaveGame(gameId, playerId);
-            leaveTable(gameId, playerId, playerName);
-            router.push("/lobby");
-          }} 
-          onExit={() => {
-            leaveGame(gameId, playerId);
-            leaveTable(gameId, playerId, playerName);
-            router.push("/lobby");
-          }} 
+          onMenu={() => { leaveGame(gameId, playerId); leaveTable(gameId, playerId, playerName); router.push("/lobby"); }} 
+          onExit={() => { leaveGame(gameId, playerId); leaveTable(gameId, playerId, playerName); router.push("/lobby"); }} 
         />
         <div style={{ position:"relative",zIndex:10,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Georgia,serif" }}>
           <div style={{ ...modalBox,maxWidth:500 }}>
@@ -727,9 +749,10 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
             <h2 style={{ fontSize:22,fontWeight:"bold",color:COL.amarillo,marginBottom:16,letterSpacing:3,textTransform:"uppercase",textShadow:`0 0 22px rgba(255,209,0,0.55)` }}>¡Partida Terminada!</h2>
             <div style={{ background:`linear-gradient(135deg, rgba(255,209,0,0.2), rgba(206,17,38,0.15))`,border:`2.5px solid ${COL.amarillo}`,borderRadius:14,padding:"16px 20px",marginBottom:20,boxShadow:`0 0 28px rgba(255,209,0,0.22)` }}>
               <p style={{ fontSize:17,color:"rgba(255,248,231,0.8)",marginBottom:6 }}>{winnerPlayer?.emoji} <strong style={{ color:COL.amarillo }}>{winnerPlayer?.name||winner?.name}</strong>{winnerPlayer?.isMe&&" (Tú)"}</p>
-              <p style={{ fontSize:32,fontWeight:900,marginBottom:4,background:`linear-gradient(135deg, ${COL.amarillo}, ${COL.rojo})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent" }}>¡GANA CON {winnerPlayer?.score||0} PTS!</p>
+              <p style={{ fontSize:32,fontWeight:900,marginBottom:4,background:`linear-gradient(135deg, ${COL.amarillo}, ${COL.rojo})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent" }}>¡GANA CON {topScore} PTS!</p>
               <p style={{ fontSize:12,color:"rgba(255,248,231,0.4)" }}>de {totalPoints} puntos en juego</p>
             </div>
+
             <div style={{ marginBottom:20 }}>
               <p style={{ fontSize:11,color:`${COL.amarillo}88`,marginBottom:10,letterSpacing:3,textTransform:"uppercase" }}>Tabla de posiciones</p>
               <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
