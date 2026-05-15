@@ -15,7 +15,7 @@ const GATEWAY =
   process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
 
 // Monto del bono diario — debe coincidir con Balance.DAILY_BONUS en el backend
-const DAILY_BONUS_AMOUNT = 100;
+const DAILY_BONUS_AMOUNT = 300;
 
 export interface UseBalanceReturn {
   amount: number | null;
