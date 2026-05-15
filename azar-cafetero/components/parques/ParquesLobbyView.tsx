@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUserContext } from "@/context/UserContext";
 import { useGameWebSocket, TableDTO } from "@/hooks/useGameWebSocket";
+import ProfilePanel from "@/components/profile/ProfilePanel";
 import LobbyBackdrop from "@/components/lobby/LobbyBackdrop";
 import LobbyFireflies from "@/components/lobby/LobbyFireflies";
 import Sidebar from "./Sidebar";
@@ -42,6 +43,7 @@ export default function ParquesLobbyView() {
   const [filter, setFilter] = useState('todas');
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
   const [muted, setMuted] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -101,6 +103,8 @@ export default function ParquesLobbyView() {
       router.replace("/");
     } else if (action === 'home') {
       router.push("/lobby");
+    } else if (action === 'profile') {
+      setPanelOpen(true);
     }
   };
 
@@ -349,6 +353,12 @@ export default function ParquesLobbyView() {
           </span>
         </footer>
       </div>
+
+      <ProfilePanel
+        open={panelOpen}
+        onClose={() => setPanelOpen(false)}
+        onLogout={() => { setPanelOpen(false); handleAction('exit'); }}
+      />
 
       <CreateTableModal
         open={createOpen}

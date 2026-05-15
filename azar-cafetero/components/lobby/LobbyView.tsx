@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUserContext } from "@/context/UserContext";
+import ProfilePanel from "@/components/profile/ProfilePanel";
 import PlayerHUD from "@/components/lobby/PlayerHUD";
 import LobbyBackdrop from "@/components/lobby/LobbyBackdrop";
 import LobbyFireflies from "@/components/lobby/LobbyFireflies";
