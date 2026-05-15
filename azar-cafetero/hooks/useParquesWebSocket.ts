@@ -272,6 +272,15 @@ const joinGame = useCallback((gameId: string, playerId: string, playerName: stri
     });
   }, []);
 
+  const addBot = useCallback((gameId: string, difficulty: 'EASY' | 'MEDIUM' | 'HARD') => {
+    const client = clientRef.current;
+    if (!client?.connected) return;
+    client.publish({
+      destination: `/app/game/${gameId}/addBot`,
+      body: JSON.stringify({ difficulty }),
+    });
+  }, []);
+
   // ── Cleanup ───────────────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
@@ -289,11 +298,12 @@ const joinGame = useCallback((gameId: string, playerId: string, playerName: stri
   subscribeToGame,
   createGame,
   joinGame,
-  startGame,  // Added startGame
+  startGame,
   rollDice,
   movePiece,
   passTurn,
   exitJail,
   leaveGame,
+  addBot,
 };
 }
