@@ -22,7 +22,7 @@ export default function TableCardBrisca({ table, palette, onEnter, isNew }: Tabl
   const maxPlayers = table.maxPlayers || 4;
   const full = occupied >= maxPlayers;
   // Note: status is not in TableDTO yet, defaulting to 'esperando'
-  const status = 'esperando';
+  const status: string = 'esperando'; 
   const friendly = table.requiredBet === 0;
   const cream = '#F6E9C3';
   const sk = palette.cafe;
