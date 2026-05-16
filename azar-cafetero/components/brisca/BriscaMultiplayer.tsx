@@ -273,6 +273,12 @@ interface BriscaMultiplayerProps {
   onLeaveTable?: (tableId: string, playerId: string, playerName: string) => void;
 }
 
+const FlagStripe = ({ h=6 }: { h?: number }) => (
+  <div style={{ display:"flex",height:h,borderRadius:h/2,overflow:"hidden" }}>
+    <div style={{ flex:2,background:COL.amarillo }}/><div style={{ flex:1,background:COL.azul }}/><div style={{ flex:1,background:COL.rojo }}/>
+  </div>
+);
+
 export default function BriscaMultiplayer({ gameId: propGameId, userName, userId, mockMode = false, onLeaveTable }: BriscaMultiplayerProps) {
   const router = useRouter();
   const { user } = useUserContext();
@@ -553,13 +559,6 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   },[phase, refreshBalance]);
 
   // ============ BACKGROUND — poker felt ============
-
-
-  const FlagStripe = ({ h=6 }: { h?: number }) => (
-    <div style={{ display:"flex",height:h,borderRadius:h/2,overflow:"hidden" }}>
-      <div style={{ flex:2,background:COL.amarillo }}/><div style={{ flex:1,background:COL.azul }}/><div style={{ flex:1,background:COL.rojo }}/>
-    </div>
-  );
 
   const modalBox: React.CSSProperties = {
     textAlign:"center",padding:"44px 52px",borderRadius:22,
