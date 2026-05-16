@@ -217,14 +217,14 @@ export default function BriscaLobbyView() {
               fontSize: 56, lineHeight: 0.95, letterSpacing: '-.02em',
               color: PALETTE.cream,
             }}>
-              Buscá <em style={{ color: PALETTE.amarillo, fontStyle: 'italic' }}>compañero</em> o jugá <em style={{ color: PALETTE.amarillo, fontStyle: 'italic' }}>mano a mano</em>
+              Busca <em style={{ color: PALETTE.amarillo, fontStyle: 'italic' }}>compañero</em> o juega <em style={{ color: PALETTE.amarillo, fontStyle: 'italic' }}>mano a mano</em>
             </h1>
             <p style={{
               margin: '12px 0 0', fontSize: 14, color: PALETTE.creamSoft, opacity: .75,
               maxWidth: 560, lineHeight: 1.5,
             }}>
               40 cartas, una pinta de triunfo y la cara de póker bien puesta.
-              <strong style={{ color: PALETTE.cream }}> Sentate donde te abran un puesto.</strong>
+              <strong style={{ color: PALETTE.cream }}> Siéntate donde te abran un puesto.</strong>
             </p>
           </div>
           <button onClick={() => setCreateOpen(true)} style={{

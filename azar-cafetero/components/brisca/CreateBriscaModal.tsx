@@ -14,7 +14,7 @@ interface CreateBriscaModalProps {
 export default function CreateBriscaModal({ open, palette, onClose, onCreate, creating }: CreateBriscaModalProps) {
   const [name, setName] = useState("");
   const [bet, setBet] = useState(100);
-  const [maxSeats, setMaxSeats] = useState(2);
+  const [maxSeats] = useState(4); // Always 4 seats (FFA)
 
   if (!open) return null;
 
@@ -39,7 +39,7 @@ export default function CreateBriscaModal({ open, palette, onClose, onCreate, cr
             fontSize: 32, color: palette.cream, lineHeight: 1,
           }}>Repartir Mesa</h2>
           <p style={{ margin: "8px 0 0", color: palette.creamSoft, opacity: 0.7, fontSize: 14 }}>
-            Personalizá tu salón de Brisca.
+            Personaliza tu salón de Brisca.
           </p>
         </div>
 
@@ -65,40 +65,13 @@ export default function CreateBriscaModal({ open, palette, onClose, onCreate, cr
             />
           </div>
 
-          {/* Max Seats */}
-          <div>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 800, textTransform: "uppercase", color: palette.amarillo, letterSpacing: ".1em", marginBottom: 12 }}>
-              Formato de juego
-            </label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              {[
-                { v: 2, label: "1 vs 1", sub: "Mano a mano" },
-                { v: 4, label: "2 vs 2", sub: "Por parejas" },
-              ].map(opt => (
-                <button
-                  key={opt.v}
-                  onClick={() => setMaxSeats(opt.v)}
-                  style={{
-                    all: "unset", cursor: "pointer", padding: "14px", borderRadius: 14,
-                    background: maxSeats === opt.v ? `${palette.amarillo}15` : "rgba(255,255,255,0.03)",
-                    border: `1.5px solid ${maxSeats === opt.v ? palette.amarillo : "transparent"}`,
-                    textAlign: "center", transition: "all 0.2s",
-                  }}
-                >
-                  <div style={{ fontSize: 15, fontWeight: 800, color: maxSeats === opt.v ? palette.amarillo : palette.cream }}>{opt.label}</div>
-                  <div style={{ fontSize: 11, color: palette.creamSoft, opacity: 0.6, marginTop: 2 }}>{opt.sub}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Bet */}
           <div>
             <label style={{ display: "block", fontSize: 11, fontWeight: 800, textTransform: "uppercase", color: palette.amarillo, letterSpacing: ".1em", marginBottom: 12 }}>
               Apuesta mínima
             </label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {[0, 50, 100, 250, 500].map(val => (
+              {[100, 250, 500, 1000].map(val => (
                 <button
                   key={val}
                   onClick={() => setBet(val)}
@@ -111,7 +84,7 @@ export default function CreateBriscaModal({ open, palette, onClose, onCreate, cr
                     transition: "all 0.15s",
                   }}
                 >
-                  {val === 0 ? "Amistosa" : `$${val}`}
+                  ${val}
                 </button>
               ))}
             </div>
