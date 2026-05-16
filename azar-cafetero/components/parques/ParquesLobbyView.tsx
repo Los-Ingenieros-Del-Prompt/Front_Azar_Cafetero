@@ -136,12 +136,12 @@ export default function ParquesLobbyView() {
       <LobbyBackdrop density="medium" />
       <LobbyFireflies count={12} />
 
-      <Sidebar 
-        palette={PALETTE} 
+      <Sidebar
+        palette={PALETTE}
         active="home"
-        muted={muted} 
+        muted={muted}
         onMute={() => setMuted(!muted)}
-        onAction={handleAction} 
+        onAction={handleAction}
       />
 
       <div style={{
@@ -155,7 +155,7 @@ export default function ParquesLobbyView() {
           animation: 'hero-in .6s ease-out',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <button 
+            <button
               onClick={() => router.push("/lobby")}
               style={{
                 all: 'unset', cursor: 'pointer',
@@ -198,14 +198,14 @@ export default function ParquesLobbyView() {
               fontSize: 56, lineHeight: 0.95, letterSpacing: '-.02em',
               color: PALETTE.cream,
             }}>
-              Sentate donde te <em style={{ color: PALETTE.amarillo, fontStyle: 'italic' }}>llamen las fichas</em>
+              Siéntate donde te <em style={{ color: PALETTE.amarillo, fontStyle: 'italic' }}>llamen las fichas</em>
             </h1>
             <p style={{
               margin: '12px 0 0', fontSize: 14, color: PALETTE.creamSoft, opacity: .75,
               maxWidth: 560, lineHeight: 1.5,
             }}>
               Estas son las mesas abiertas ahorita. Si no te gusta ninguna,
-              <strong style={{ color: PALETTE.cream }}> armá la tuya en 10 segundos.</strong>
+              <strong style={{ color: PALETTE.cream }}> arma la tuya en 10 segundos.</strong>
             </p>
           </div>
           <button onClick={() => setCreateOpen(true)} style={{
@@ -304,11 +304,11 @@ export default function ParquesLobbyView() {
             <div key={t.tableId} style={{
               animation: `card-enter .55s ${0.04 * idx}s cubic-bezier(.2,.7,.3,1) backwards`,
             }}>
-              <TableCard 
-                table={t} 
-                palette={PALETTE} 
+              <TableCard
+                table={t}
+                palette={PALETTE}
                 onEnter={enterRoom}
-                isNew={Date.now() - t.createdAt < 10000} 
+                isNew={Date.now() - t.createdAt < 10000}
               />
             </div>
           ))}
@@ -335,7 +335,7 @@ export default function ParquesLobbyView() {
         }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <span style={{ width: 6, height: 6, borderRadius: 999, background: PALETTE.verde, boxShadow: `0 0 8px ${PALETTE.verde}` }} />
-            <strong style={{ color: PALETTE.cream }}>Activo</strong> 
+            <strong style={{ color: PALETTE.cream }}>Activo</strong>
             &nbsp;·&nbsp;
             <strong style={{ color: PALETTE.cream }}>{tables.length}</strong> mesas de Parqués
           </span>
@@ -400,7 +400,7 @@ export default function ParquesLobbyView() {
 }
 
 function ConnectionChip({ palette, isConnected }: { palette: any; isConnected: boolean }) {
-  const cfg = isConnected 
+  const cfg = isConnected
     ? { color: palette.verde, label: 'En vivo', pulse: false }
     : { color: palette.amarillo, label: 'Conectando…', pulse: true };
 

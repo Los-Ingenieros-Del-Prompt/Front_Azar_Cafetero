@@ -91,7 +91,7 @@ export default function CreateTableModal({ open, palette, onClose, onCreate, cre
               <h2 style={{
                 margin: 0, fontFamily: 'DM Serif Display, serif', fontSize: 32, lineHeight: 1,
                 letterSpacing: '-.01em',
-              }}>¿Cómo le ponés?</h2>
+              }}>Un nombre chimba</h2>
             </div>
             <button onClick={onClose} aria-label="Cerrar" style={{
               all: 'unset', cursor: 'pointer',
@@ -143,7 +143,7 @@ export default function CreateTableModal({ open, palette, onClose, onCreate, cre
               />
               {nameError ? (
                 <div style={{ fontSize: 11, color: palette.rojo, marginTop: 6, fontWeight: 600 }}>
-                  Ponele un nombre, parcero.
+                  Póngale un nombre, parcero.
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
@@ -173,11 +173,11 @@ export default function CreateTableModal({ open, palette, onClose, onCreate, cre
                   Apuesta requerida
                 </label>
                 <span style={{ fontSize: 11, color: palette.creamSoft, opacity: .65 }}>
-                  {bet === 0 ? 'Mesa amistosa, sin apuesta.' : `Cada jugador entra con ${bet} granos.`}
+                  Cada jugador entra con {bet} granos.
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <input type="range" min="0" max="1000" step="25"
+                <input type="range" min="100" max="1000" step="50"
                   value={bet} onChange={(e) => setBet(+e.target.value)}
                   style={{ flex: 1, accentColor: palette.amarillo, height: 4 }} />
                 <div style={{
@@ -196,7 +196,7 @@ export default function CreateTableModal({ open, palette, onClose, onCreate, cre
 
               {/* Bet presets */}
               <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-                {[0, 25, 50, 100, 250, 500].map(v => (
+                {[100, 250, 500, 1000].map(v => (
                   <button key={v} onClick={() => setBet(v)} style={{
                     all: 'unset', cursor: 'pointer', flex: 1,
                     padding: '8px 0', textAlign: 'center',
@@ -206,7 +206,7 @@ export default function CreateTableModal({ open, palette, onClose, onCreate, cre
                     borderRadius: 8,
                     border: `1px solid ${bet === v ? palette.amarillo : palette.creamSoft + '1a'}`,
                     transition: 'all .15s',
-                  }}>{v === 0 ? 'Sin' : v}</button>
+                  }}>{v}</button>
                 ))}
               </div>
             </div>
@@ -219,7 +219,7 @@ export default function CreateTableModal({ open, palette, onClose, onCreate, cre
           }}>
             <div style={{ flex: 1, fontSize: 11, color: palette.creamSoft, opacity: .55, lineHeight: 1.5 }}>
               Tu mesa será <strong style={{ color: palette.cream }}>pública</strong> y aparecerá en el lobby.
-              Vos sos el anfitrión.
+              Serás el anfitrión.
             </div>
             <button onClick={onClose} style={{
               all: 'unset', cursor: 'pointer',
@@ -237,10 +237,10 @@ export default function CreateTableModal({ open, palette, onClose, onCreate, cre
               opacity: creating ? 0.7 : 1,
             }}>
               {creating ? (
-                 <>
-                   <div style={{ width: 14, height: 14, borderRadius: 999, border: '2px solid rgba(0,0,0,.2)', borderTopColor: '#000', animation: 'spin .6s linear infinite' }} />
-                   Armando...
-                 </>
+                <>
+                  <div style={{ width: 14, height: 14, borderRadius: 999, border: '2px solid rgba(0,0,0,.2)', borderTopColor: '#000', animation: 'spin .6s linear infinite' }} />
+                  Armando...
+                </>
               ) : (
                 <>
                   Armar la mesa
