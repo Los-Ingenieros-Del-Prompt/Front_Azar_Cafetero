@@ -6,6 +6,7 @@ import { useUserContext } from "@/context/UserContext";
 import { useBalance } from "@/hooks/useBalance";
 import { useGameWebSocket, TableDTO } from "@/hooks/useGameWebSocket";
 import ProfilePanel from "@/components/profile/ProfilePanel";
+import PlayerHUD from "@/components/lobby/PlayerHUD";
 import LobbyBackdrop from "@/components/lobby/LobbyBackdrop";
 import LobbyFireflies from "@/components/lobby/LobbyFireflies";
 import Sidebar from "./Sidebar";
@@ -340,6 +341,8 @@ export default function ParquesLobbyView() {
           </span>
         </footer>
       </div>
+
+      <PlayerHUD />
 
       <ProfilePanel
         open={panelOpen}
