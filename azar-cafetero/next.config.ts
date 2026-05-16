@@ -1,15 +1,16 @@
-import type { NextConfig } from "next";
-
+typescript
 const nextConfig: NextConfig = {
   output: 'standalone',
   async rewrites() {
-    return [
-      {
-        source: '/api-proxy/:path*',
-        destination: 'http://azar-alb-774975018.us-east-1.elb.amazonaws.com/:path*',
-      },
-    ];
+    // Solo activo en desarrollo local
+    if (process.env.NODE_ENV === 'development') {
+      return [
+        {
+          source: '/api-proxy/:path*',
+          destination: 'http://localhost:8082/:path*',
+        },
+      ];
+    }
+    return [];
   },
 };
-
-export default nextConfig;
