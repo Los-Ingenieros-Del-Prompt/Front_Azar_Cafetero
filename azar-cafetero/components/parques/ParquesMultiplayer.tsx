@@ -13,7 +13,6 @@ import {
 } from "@/hooks/useParquesWebSocket";
 import ParquesPieces from "./ParquesPieces";
 import WaitingArea from "@/components/games/WaitingArea";
-import { COLOR_EMOJI } from "./ParquesMultiplayer";
 
 export const COLOR_STYLES: Record<string, { bg: string; border: string; text: string; hex: string }> = {
   ROJO:     { bg: "bg-red-500/20",     border: "border-red-400",     text: "text-red-300",     hex: "#f87171" },
