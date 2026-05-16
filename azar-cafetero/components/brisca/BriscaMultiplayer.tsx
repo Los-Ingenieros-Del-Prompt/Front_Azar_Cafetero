@@ -265,6 +265,12 @@ const Badge: React.FC<BadgeProps> = ({ player, isLeader }) => (
   </div>
 );
 
+const FlagStripe = ({ h=6 }: { h?: number }) => (
+  <div style={{ display:"flex",height:h,borderRadius:h/2,overflow:"hidden" }}>
+    <div style={{ flex:2,background:COL.amarillo }}/><div style={{ flex:1,background:COL.azul }}/><div style={{ flex:1,background:COL.rojo }}/>
+  </div>
+);
+
 // ============ MAIN COMPONENT ============
 interface BriscaMultiplayerProps {
   gameId?: string;
@@ -556,11 +562,6 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
   // ============ BACKGROUND — poker felt ============
 
 
-  const FlagStripe = ({ h=6 }: { h?: number }) => (
-    <div style={{ display:"flex",height:h,borderRadius:h/2,overflow:"hidden" }}>
-      <div style={{ flex:2,background:COL.amarillo }}/><div style={{ flex:1,background:COL.azul }}/><div style={{ flex:1,background:COL.rojo }}/>
-    </div>
-  );
 
   const modalBox: React.CSSProperties = {
     textAlign:"center",padding:"44px 52px",borderRadius:22,
