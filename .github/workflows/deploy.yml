@@ -1,18 +1,16 @@
-name: Build & Deploy Frontend
+name: Deploy Frontend EC2
 
 on:
   push:
-    branches: [master]
+    branches: [main]
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Login a DockerHub
+      - name: Login DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -23,29 +21,29 @@ jobs:
         with:
           context: ./azar-cafetero
           push: true
-          no-cache: true 
+          no-cache: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/azar-front:latest
           build-args: |
             NEXT_PUBLIC_GATEWAY_URL=${{ secrets.NEXT_PUBLIC_GATEWAY_URL }}
             NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
             NEXT_PUBLIC_BRISCA_WS_URL=${{ secrets.NEXT_PUBLIC_BRISCA_WS_URL }}
+            NEXT_PUBLIC_PARQUES_WS_URL=${{ secrets.NEXT_PUBLIC_PARQUES_WS_URL }}
             NEXT_PUBLIC_GAME_WS_URL=${{ secrets.NEXT_PUBLIC_GAME_WS_URL }}
             NEXT_PUBLIC_GAME_API_URL=${{ secrets.NEXT_PUBLIC_GAME_API_URL }}
-            NEXT_PUBLIC_PARQUES_WS_URL=${{ secrets.NEXT_PUBLIC_PARQUES_WS_URL }}
-            NEXT_PUBLIC_USER_URL=${{ secrets.NEXT_PUBLIC_USER_URL }}
+            NEXT_PUBLIC_LOBBY_URL=${{ secrets.NEXT_PUBLIC_LOBBY_URL }}
 
       - name: Deploy en EC2
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host: ${{ secrets.FRONTEND_EC2_HOST }}
           username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key: ${{ secrets.FRONTEND_EC2_SSH_KEY }}
           script: |
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/azar-front:latest
             docker stop azar-front || true
             docker rm azar-front || true
-            docker run -d --name azar-front --restart unless-stopped -p 3000:3000 \
-              -e NEXT_PUBLIC_GATEWAY_URL="${{ secrets.NEXT_PUBLIC_GATEWAY_URL }}" \
-              -e NEXT_PUBLIC_GOOGLE_CLIENT_ID="${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}" \
-              -e NEXT_PUBLIC_BRISCA_WS_URL="${{ secrets.NEXT_PUBLIC_BRISCA_WS_URL }}" \
+            docker run -d \
+              --name azar-front \
+              --restart unless-stopped \
+              -p 3000:3000 \
               ${{ secrets.DOCKERHUB_USERNAME }}/azar-front:latest
