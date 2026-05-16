@@ -262,11 +262,14 @@ export default function PlayerHUD({ onLogout }: PlayerHUDProps) {
                     {diff}
                   </span>
                 )}
-                🪙&nbsp;
+                <svg width="14" height="14" viewBox="0 0 16 16" style={{ flexShrink: 0 }}>
+                  <ellipse cx="8" cy="8" rx="4.5" ry="6.5" fill="#FCD116" transform="rotate(-20 8 8)" />
+                  <path d="M 8 1.5 Q 5 8 8 14.5" stroke="rgba(0,0,0,.45)" strokeWidth="1" fill="none" transform="rotate(-20 8 8)" />
+                </svg>
                 <span className={`hud-balance-amount${amount === 0 ? " is-zero" : ""}`}>
                   {amount == null ? "—" : amount.toLocaleString("es-CO")}
                 </span>
-                &nbsp;fichas
+                &nbsp;granos
               </span>
             </div>
           </div>
@@ -279,7 +282,7 @@ export default function PlayerHUD({ onLogout }: PlayerHUDProps) {
             disabled={claimingBonus}
             aria-label="Reclamar bono diario"
           >
-            {claimingBonus ? "..." : "🎁 +100 fichas"}
+            {claimingBonus ? "..." : "🎁 +100 granos"}
           </button>
         )}
 

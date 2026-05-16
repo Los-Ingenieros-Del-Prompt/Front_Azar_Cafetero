@@ -195,35 +195,6 @@ export default function BriscaLobbyView() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <ConnectionChip palette={PALETTE} isConnected={isConnected} />
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              padding: '7px 14px', borderRadius: 999,
-              background: 'rgba(255,255,255,.04)',
-              border: `1px solid ${PALETTE.creamSoft}22`,
-              color: PALETTE.cream, fontWeight: 700, fontSize: 13,
-            }}>
-              <svg width="14" height="14" viewBox="0 0 16 16">
-                <ellipse cx="8" cy="8" rx="4.5" ry="6.5" fill={PALETTE.amarillo} transform="rotate(-20 8 8)" />
-                <path d="M 8 1.5 Q 5 8 8 14.5" stroke="rgba(0,0,0,.45)" strokeWidth="1" fill="none" transform="rotate(-20 8 8)" />
-              </svg>
-              {amount !== null ? amount.toLocaleString("es-CO") : "—"}
-              <span style={{ opacity: .55, fontWeight: 500, fontSize: 11 }}>granos</span>
-            </span>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 13, color: PALETTE.creamSoft,
-            }}>
-              <span>{user?.name || "Invitado"}</span>
-              <span style={{
-                width: 32, height: 32, borderRadius: 999,
-                background: `linear-gradient(135deg, ${PALETTE.amarillo}, ${PALETTE.rojo})`,
-                border: `2px solid ${PALETTE.deep}`,
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 800, fontSize: 12, color: '#fff',
-                overflow: 'hidden'
-              }}>
-                {user?.avatarUrl ? <img src={user.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (user?.name || "I").charAt(0).toUpperCase()}
-              </span>
-            </span>
           </div>
         </header>
 
