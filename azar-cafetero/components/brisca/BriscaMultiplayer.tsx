@@ -14,7 +14,6 @@ import {
   BotDifficulty,
 } from "@/hooks/useBriscaWebSocket";
 import { useBalance } from "@/hooks/useBalance";
-import WaitingArea from "@/components/games/WaitingArea";
 
 // ============ TYPE DEFINITIONS ============
 type Suit = "Oros" | "Copas" | "Espadas" | "Bastos";
@@ -590,46 +589,115 @@ export default function BriscaMultiplayer({ gameId: propGameId, userName, userId
     );
   }
 
-  if (phase === "waiting") {
-    const SUITS_INFO: Record<string, any> = {
-      Oros: { label: "Oros", glyph: "●", color: "#f5d547" },
-      Copas: { label: "Copas", glyph: "♥", color: "#c54a3f" },
-      Espadas: { label: "Espadas", glyph: "♠", color: "#5a89c6" },
-      Bastos: { label: "Bastos", glyph: "♣", color: "#3fa86b" },
-    };
-
-    const mappedPlayers = players.map((p) => ({
-      id: p.id,
-      name: p.name,
-      isMe: p.isMe,
-      isBot: p.id.includes("-bot-") || p.id.startsWith("BOT_"),
-      ready: true, // Brisca starts when host says so
-      initials: p.name.substring(0, 2).toUpperCase(),
-      color: p.clr,
-      emoji: p.emoji,
-    }));
-
-    const isHost = players[0]?.id === playerId;
-
+  if (phase==="waiting") {
     return (
-      <WaitingArea
-        gameTitle="BRISCA"
-        gameId={gameId}
-        players={mappedPlayers}
-        maxSeats={4}
-        isHost={isHost}
-        onStart={handleStartGame}
-        onLeave={() => {
-          leaveGame(gameId, playerId);
-          leaveTable(gameId, playerId, playerName);
-          router.push("/lobby");
-        }}
-        onAddBot={(diff) => addBot(gameId, diff as any)}
-        onKick={(id) => leaveGame(gameId, id)}
-        onReady={() => {}} // Brisca doesn't have ready state yet
-        briscaRules={true}
-        trumpSuit={trumpSuit ? SUITS_INFO[trumpSuit] : undefined}
-      />
+      <div style={{ position:"relative",minHeight:"100vh",width:"100%",color:"white",overflow:"hidden",background:"#001800" }}>
+        <PokerTable/>
+        <GameControls 
+          onMenu={() => {
+            leaveGame(gameId, playerId);
+            leaveTable(gameId, playerId, playerName);
+            router.push("/lobby");
+          }} 
+          onExit={() => {
+            leaveGame(gameId, playerId);
+            leaveTable(gameId, playerId, playerName);
+            router.push("/lobby");
+          }} 
+        />
+        <div style={{ position:"relative",zIndex:10,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Georgia,serif" }}>
+          <div style={modalBox}>
+            <FlagStripe h={8}/>
+            <div style={{ fontSize:44,margin:"16px 0 4px" }}>🌺</div>
+            <h1 style={{
+              fontSize:58,fontWeight:900,fontStyle:"italic",
+              background:`linear-gradient(135deg, ${COL.amarillo} 0%, ${COL.oro} 40%, ${COL.rojo} 100%)`,
+              WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",
+              letterSpacing:10,marginBottom:2,lineHeight:1,fontFamily:"Georgia,serif",
+              filter:`drop-shadow(0 0 18px rgba(255,209,0,0.35))`,
+            }}>BRISCA</h1>
+            <p style={{ color:COL.caribe,fontSize:11,marginBottom:24,letterSpacing:4,textTransform:"uppercase" }}>Mesa: {gameId}</p>
+            <div style={{ marginBottom:24 }}>
+              <p style={{ color:"rgba(255,248,231,0.5)",fontSize:12,marginBottom:12,letterSpacing:2,textTransform:"uppercase" }}>Jugadores ({players.length}/4)</p>
+              <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+                {players.map((p,i)=>(
+                  <div key={p.id} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",borderRadius:12,background:`linear-gradient(135deg, ${PLAYER_COLORS[i]}22, transparent)`,border:`2px solid ${PLAYER_COLORS[i]}88`,boxShadow:`0 0 14px ${PLAYER_COLORS[i]}20` }}>
+                    <span style={{ color:PLAYER_COLORS[i],fontWeight:"bold",fontSize:14,textShadow:`0 0 8px ${PLAYER_COLORS[i]}88` }}>{PLAYER_EMOJIS[i]} {p.name}{p.isMe&&" (Tú)"}</span>
+                    <div style={{ width:10,height:10,borderRadius:"50%",background:COL.selva,boxShadow:`0 0 10px ${COL.selva}` }}/>
+                  </div>
+                ))}
+                {players.length<4&&<div style={{ padding:"14px 16px",borderRadius:12,border:`2px dashed rgba(255,209,0,0.2)`,color:"rgba(255,248,231,0.3)",fontSize:13 }}>Esperando jugadores...</div>}
+              </div>
+            </div>
+            {canStart&&(
+              <>
+                <p style={{ color:`${COL.amarillo}88`,fontSize:12,marginBottom:10 }}>
+                  Apuesta: <strong style={{ color:COL.amarillo }}>{BET_AMOUNT} fichas</strong>
+                  {playerBalance !== null && (
+                    <span style={{ color:playerBalance < BET_AMOUNT ? "#f87171" : "#4ade80", marginLeft:8 }}>
+                      (tu saldo: {playerBalance})
+                    </span>
+                  )}
+                </p>
+                <button
+                  onClick={handleStartGame}
+                  disabled={playerBalance !== null && playerBalance < BET_AMOUNT}
+                  style={{ width:"100%",background:playerBalance !== null && playerBalance < BET_AMOUNT ? "rgba(100,100,100,0.5)" : `linear-gradient(135deg, ${COL.amarillo}, ${COL.oro})`,color:"#1a0000",fontWeight:"bold",fontSize:16,padding:"15px 28px",borderRadius:12,border:`2px solid ${COL.rojo}`,cursor:playerBalance !== null && playerBalance < BET_AMOUNT ? "not-allowed" : "pointer",fontFamily:"Georgia,serif",letterSpacing:3,textTransform:"uppercase",boxShadow:`0 0 28px rgba(255,209,0,0.55), 0 4px 14px rgba(0,0,0,0.4)`,transition:"transform 0.15s",opacity:playerBalance !== null && playerBalance < BET_AMOUNT ? 0.6 : 1 }}
+                  onMouseEnter={e=>{if(!(playerBalance !== null && playerBalance < BET_AMOUNT))(e.currentTarget as HTMLElement).style.transform="scale(1.02)";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="scale(1)";}}>
+                  {playerBalance !== null && playerBalance < BET_AMOUNT ? "Saldo insuficiente" : "¡Iniciar Partida!"}
+                </button>
+              </>
+            )}
+            {/* ── BOT SECTION (PBI 144 & 145) ── */}
+            {phase === "waiting" && (
+              <div style={{ marginTop:16,padding:"14px 18px",borderRadius:14,background:"rgba(0,0,0,0.4)",border:`2px dashed rgba(255,209,0,0.35)` }}>
+                <p style={{ color:`${COL.amarillo}`,fontSize:11,letterSpacing:2,textTransform:"uppercase",marginBottom:10,fontWeight:"bold" }}>
+                  🤖 Agregar Bot
+                </p>
+                <div style={{ display:"flex",gap:8,alignItems:"center",flexWrap:"wrap" }}>
+                  <select
+                    value={botDifficulty}
+                    onChange={e => setBotDifficulty(e.target.value as BotDifficulty)}
+                    style={{ background:"rgba(0,48,135,0.8)",color:"white",border:`2px solid ${COL.amarillo}`,borderRadius:8,padding:"7px 12px",fontSize:12,fontFamily:"Georgia,serif",cursor:"pointer",flex:1,minWidth:140 }}
+                  >
+                    <option value="EASY">🟢 Fácil — jugadas aleatorias</option>
+                    <option value="MEDIUM">🟡 Medio — estrategia básica</option>
+                    <option value="HARD">🔴 Difícil — maximiza puntos</option>
+                  </select>
+                  <button
+                    onClick={() => addBot(gameId, botDifficulty)}
+                    disabled={players.length >= 4}
+                    style={{
+                      background: players.length >= 4 ? "rgba(100,100,100,0.5)" : `linear-gradient(135deg, ${COL.rojo}, #8b0000)`,
+                      color:"white", fontWeight:"bold", fontSize:13,
+                      padding:"8px 18px", borderRadius:10,
+                      border:`2px solid ${COL.amarillo}`,
+                      cursor: players.length >= 4 ? "not-allowed" : "pointer",
+                      opacity: players.length >= 4 ? 0.5 : 1,
+                      fontFamily:"Georgia,serif", letterSpacing:1,
+                      boxShadow: players.length >= 4 ? "none" : `0 0 18px rgba(206,17,38,0.5)`,
+                      transition:"all 0.2s",
+                    }}
+                  >
+                    + Agregar Bot
+                  </button>
+                </div>
+                <p style={{ color:"rgba(255,248,231,0.35)",fontSize:10,marginTop:6 }}>
+                  Las ganancias se reducen al 50% en partidas con bots.
+                </p>
+              </div>
+            )}
+            {!canStart&&players.length<2&&<p style={{ color:`${COL.amarillo}99`,fontSize:13,marginTop:8 }}>Se necesitan al menos 2 jugadores</p>}
+            <div style={{ marginTop:20,padding:"14px 18px",borderRadius:12,background:"rgba(0,0,0,0.4)",border:`1px solid rgba(255,209,0,0.18)`,color:"rgba(255,248,231,0.4)",fontSize:11,lineHeight:2,textAlign:"left" }}>
+              <strong style={{ color:COL.amarillo,display:"block",marginBottom:6,letterSpacing:2,textTransform:"uppercase",fontSize:10 }}>Reglas</strong>
+              As·11pts · Tres·10pts · Rey·4pts · Caballo·3pts · Sota·2pts<br/>
+              · Triunfo gana cualquier carta de otro palo · No hay obligación de seguir palo
+            </div>
+            <div style={{ marginTop:16 }}><FlagStripe h={6}/></div>
+          </div>
+        </div>
+      </div>
     );
   }
 
