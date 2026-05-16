@@ -37,9 +37,9 @@ export default function TableCardBrisca({ table, palette, onEnter, isNew }: Tabl
     return { bg: palette.verde, text: palette.deep, label: '● Esperando' };
   })();
 
-  // Map TableDTO players to seats for MiniBriscaTable
+  // Map TableDTO playerCount to seats for MiniBriscaTable
   const seats = Array.from({ length: maxPlayers }).map((_, i) => ({
-    occupant: i < occupied ? (table.players && table.players[i]) || "Jugador" : undefined,
+    occupant: i < occupied ? "Jugador" : undefined,
     host: i === 0 && occupied > 0,
   }));
 
