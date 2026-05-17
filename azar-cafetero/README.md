@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Azar Cafetero - Frontend
 
-## Getting Started
+Welcome to the frontend repository for **Azar Cafetero**, a modern multiplayer web game platform featuring classic games like *Brisca* and *Parqués*. This application provides a premium user experience powered by the "Noche en el Valle" design system, real-time multiplayer synchronization via WebSockets, and seamless authentication.
 
-First, run the development server:
+## 🚀 Technology Stack
+
+This project is built using a modern, robust, and highly reactive web stack designed to handle the complexities of real-time multiplayer gaming:
+
+### Core Framework & UI
+- **[Next.js 16](https://nextjs.org/)**: Utilizing the App Router for optimal routing, API integrations, and leveraging React Server Components for enhanced performance and SEO.
+- **[React 19](https://react.dev/)**: Taking advantage of the latest React features and hooks to manage complex client-side game states, player HUDs, and interactive game boards.
+- **[TypeScript](https://www.typescriptlang.org/)**: Enforcing strict end-to-end type safety across the application, ensuring reliable refactoring and clear data models for complex game states and API payloads.
+
+### Styling & Design System
+- **[Tailwind CSS v4](https://tailwindcss.com/) & PostCSS**: A utility-first CSS framework used for rapid, responsive UI development. It is deeply integrated with our custom design tokens to maintain visual consistency.
+- **Vanilla CSS Modules**: Used alongside Tailwind for complex, highly specific micro-animations (e.g., card dealing, dice rolling, piece movements) that require fine-grained control.
+- **[Lucide React](https://lucide.dev/)**: Provides clean, scalable, and consistent SVG iconography across the entire user interface.
+
+### Real-time Communication & Multiplayer
+- **[STOMP.js](https://stomp-js.github.io/) (`@stomp/stompjs`) & [SockJS](https://github.com/sockjs/sockjs-client)**: The backbone of our multiplayer experience. These libraries establish persistent, low-latency bidirectional WebSocket connections with our backend gateway. They handle live game state synchronization, player matchmaking, bot integrations, and real-time lobby updates.
+
+### Authentication & Security
+- **[Google OAuth](https://developers.google.com/identity/gsi/web/guides/overview) (`@react-oauth/google`)**: Delivers a seamless and secure single sign-on (SSO) experience, allowing players to quickly log in, access their player profiles, and track their in-game balances.
+
+### Testing & Quality Assurance
+- **[Jest](https://jestjs.io/) & [React Testing Library](https://testing-library.com/)**: A comprehensive testing infrastructure configured with Babel and JSDOM to ensure that complex UI components and critical game logic remain bug-free and behave as expected under various scenarios.
+- **ESLint**: Enforces strict code quality rules and best practices across the codebase.
+
+## 🎨 Design System: "Noche en el Valle"
+
+The application uses a custom premium design system called **"Noche en el Valle"**. It emphasizes:
+- Atmospheric backgrounds and sleek dark modes.
+- Parchment-style modals and vibrant, tailored colors.
+- Smooth gradients and micro-animations for an interactive feel.
+- A highly polished, responsive user interface across all game lobbies and boards.
+
+## 🛠️ Getting Started
+
+### Prerequisites
+
+- Node.js (v20+ recommended)
+- npm or yarn
+
+### Installation
+
+1. Clone the repository and navigate to the project directory.
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+### Development Server
+
+Run the development server locally:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser to view the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🧪 Testing
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The project is configured with Jest and React Testing Library for robust component testing.
 
-## Learn More
+To run the test suite:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run test
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📁 Project Structure Highlights
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `/app`: Next.js App Router pages and layouts (e.g., `/lobby`, `/`).
+- `/components`: Reusable UI components.
+  - `/components/games`: Game-specific logic and UI (Brisca tables, Parqués boards, Animated Pieces, Dice mechanics).
+  - `/components/lobby`: Lobby interfaces, Waiting Rooms, and Player HUDs.
+  - `/components/login`: Authentication UI and Google OAuth integration components.
+- `/lib`: Utility functions, API handlers (e.g., `balanceApi.ts`), and centralized WebSocket/STOMP configurations.
 
-## Deploy on Vercel
+## ⚙️ Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `npm run dev`: Starts the Next.js development server.
+- `npm run build`: Builds the application for production deployment.
+- `npm run start`: Starts the production server.
+- `npm run lint`: Runs ESLint to check for code quality.
+- `npm run test`: Executes the Jest test suite.
