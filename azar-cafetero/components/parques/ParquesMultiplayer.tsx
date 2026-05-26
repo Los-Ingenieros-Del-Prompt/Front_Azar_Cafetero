@@ -12,7 +12,6 @@ import {
   PieceDTO,
 } from "@/hooks/useParquesWebSocket";
 import ParquesPieces from "./ParquesPieces";
-import WaitingArea from "@/components/games/WaitingArea";
 
 export const COLOR_STYLES: Record<string, { bg: string; border: string; text: string; hex: string }> = {
   ROJO:     { bg: "bg-red-500/20",     border: "border-red-400",     text: "text-red-300",     hex: "#f87171" },
@@ -317,30 +316,113 @@ export default function ParquesMultiplayer({ gameId: propGameId, userName, userI
     const playersCount = gameState?.players.length ?? 1;
     const canStart = playersCount >= 2;
 
-    const mappedPlayers = (gameState?.players ?? [{ id: playerId, name: playerName, color: "VERDE" as const }]).map((p: any) => ({
-      id: p.id,
-      name: p.name,
-      isMe: p.id === playerId,
-      isBot: p.id.startsWith("BOT_"),
-      ready: true, // Parqués starts when host says so
-      initials: p.name.substring(0, 2).toUpperCase(),
-      color: p.color,
-      emoji: COLOR_EMOJI[p.color] || "👤",
-    }));
-
     return (
-      <WaitingArea
-        gameTitle="PARQUÉS"
-        gameId={gameId}
-        players={mappedPlayers}
-        maxSeats={4}
-        isHost={isHost}
-        onStart={handleStartGame}
-        onLeave={handleExit}
-        onAddBot={(diff) => addBot(gameId, diff as any)}
-        onKick={(id) => leaveGame(gameId, id)}
-        onReady={() => {}} // Parqués doesn't have ready state yet
-      />
+      <div className="relative min-h-screen w-full text-white overflow-hidden" style={{ background: "#0a1f0a" }}>
+        <ParquesBoard />
+        <GameControls onMenu={handleExit} onExit={handleExit} />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 z-0" />
+        <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+          <div className="text-center p-8 md:p-12 rounded-[2.5rem] border-2 border-emerald-500/30 bg-black/85 backdrop-blur-xl max-w-xl w-full shadow-[0_0_50px_rgba(16,185,129,0.2)] animate-in fade-in zoom-in duration-500">
+            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-emerald-500/10 border-2 border-emerald-500/20 mb-8 animate-pulse">
+              <span className="text-6xl">🎲</span>
+            </div>
+            <h1 className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300 tracking-tighter mb-2">PARQUÉS</h1>
+            <p className="text-emerald-500/60 text-xs font-black tracking-[0.4em] uppercase mb-10">Mesa: {gameId}</p>
+
+            <div className="mb-10 text-left">
+              <div className="flex items-center justify-between mb-4 px-2">
+                <p className="text-white/40 text-xs uppercase tracking-widest font-bold">Jugadores en línea</p>
+                <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-500/30">{playersCount}/4</span>
+              </div>
+              <div className="grid gap-3">
+                {(gameState?.players ?? [{ id: playerId, name: playerName, color: "VERDE" as const }]).map((p: any) => {
+                  const s = COLOR_STYLES[p.color] || COLOR_STYLES.VERDE;
+                  return (
+                    <div key={p.id} className={`group flex items-center justify-between px-5 py-4 rounded-2xl border ${s.border}/40 ${s.bg} backdrop-blur-md transition-all hover:scale-[1.02]`}>
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-black/40 border border-white/10 flex items-center justify-center text-xl shadow-inner">
+                          {COLOR_EMOJI[p.color] || "👤"}
+                        </div>
+                        <div>
+                          <span className={`font-black text-sm ${s.text} tracking-tight`}>{p.name}</span>
+                          <p className="text-[10px] text-white/30 font-bold uppercase tracking-wider">
+                            {p.id === playerId ? "¡Eres tú!" : p.id.startsWith('BOT_') ? "Bot IA" : "Listo para jugar"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        {p.id === (gameState?.players[0]?.id ?? playerId) && (
+                          <span className="text-[10px] font-black text-yellow-500/80 bg-yellow-500/10 px-2 py-1 rounded-md border border-yellow-500/20 uppercase tracking-tighter">Host ⭐</span>
+                        )}
+                        {p.id.startsWith('BOT_') && (
+                          <span className="text-[10px] font-black text-emerald-400/70 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20 uppercase tracking-tighter">🤖 Bot</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                {playersCount < 4 && (
+                  <div className="px-5 py-4 rounded-2xl border border-dashed border-white/10 bg-white/5 flex items-center gap-4 opacity-50">
+                    <div className="w-10 h-10 rounded-full border border-dashed border-white/20 flex items-center justify-center text-white/20">?</div>
+                    <span className="text-sm font-medium text-white/30 italic">Esperando a la banda...</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {/* ── Bot section ── */}
+              <div className="p-4 rounded-2xl border border-dashed border-emerald-500/30 bg-emerald-500/5">
+                <p className="text-emerald-400/70 text-[10px] font-black uppercase tracking-widest mb-3 text-center">🤖 Agregar Bot</p>
+                <div className="flex gap-2">
+                  <select
+                    value={botDifficulty}
+                    onChange={e => setBotDifficulty(e.target.value as 'EASY' | 'MEDIUM' | 'HARD')}
+                    className="flex-1 bg-black/40 border border-emerald-500/30 text-white text-xs rounded-xl px-3 py-2 outline-none focus:border-emerald-400"
+                  >
+                    <option value="EASY">🟢 Fácil — aleatorio</option>
+                    <option value="MEDIUM">🟡 Medio — heurística</option>
+                    <option value="HARD">🔴 Difícil — análisis de amenazas</option>
+                  </select>
+                  <button
+                    onClick={() => addBot(gameId, botDifficulty)}
+                    disabled={(gameState?.players.length ?? 0) >= 4}
+                    className="bg-emerald-700 hover:bg-emerald-600 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black px-4 py-2 rounded-xl text-sm transition-all"
+                  >
+                    + Bot
+                  </button>
+                </div>
+              </div>
+
+              {/* Botón iniciar */}
+              {isHost ? (
+                <button onClick={handleStartGame} disabled={!canStart}
+                  className={`w-full group relative overflow-hidden py-5 rounded-2xl font-black text-sm uppercase tracking-[0.2em] transition-all duration-300 shadow-2xl ${canStart ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:scale-[1.03] active:scale-95 shadow-emerald-500/25" : "bg-white/10 text-white/20 cursor-not-allowed"}`}>
+                  {canStart ? (
+                    <>
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        Iniciar Partida
+                        <div className="w-2 h-2 rounded-full bg-white animate-ping" />
+                      </span>
+                      <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                    </>
+                  ) : "Faltan jugadores"}
+                </button>
+              ) : (
+                <div className="w-full py-5 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 text-emerald-400/80 font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-3">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Esperando a que el host inicie...
+                </div>
+              )}
+              {!canStart && (
+                <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest">
+                  Se requieren al menos 2 jugadores para empezar la rumba
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
